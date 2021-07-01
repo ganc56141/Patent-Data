@@ -1,21 +1,8 @@
 from typing import *
-import os, sys, requests, json
+from utility import *
+import requests, json
 import http.client
 import pickle
-
-filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
-
-
-def request_decorator(interface):
-    def inner(*args, **kwargs):     # must have inner function to take and transfer the proper arguments
-        print("\n----------------------------------")
-        print("         Start of Request\n")
-        
-        interface(*args, **kwargs)
-
-        print("\n         End Of Request")
-        print("----------------------------------\n")
-    return inner
 
 
 class Generic_API:
@@ -29,24 +16,13 @@ class Generic_API:
         # getting response
         r = cls.pickle_response(op="load")
         if forceUpdate or not r:
-            r = requests.get(api)
+            Generic_API.make_query(url=api)
             
-            printout = f'Status: {r.status_code} {http.client.responses[r.status_code]}'
-            
-            if r.status_code != 200:
-                raise Exception(printout)
-            print(printout)
-            
-        if save: cls.pickle_response(op="dump", data=r)
-        
-        # using response
-        if save:
-            with open(file='response.json', mode='wt') as f:
-                f.write(repr(r.json()))
+        if save: 
+            cls.cache_response_in_json(r, custom_json_file="test_api")
         
         data = r.json()
-        
-        # print('Response = ' + json.dumps(data) +'\n')      # converts json dictionary to string (not necessary, but safe to have)
+        # print('Response = ' + json.dumps(data) +'\n')
         return data
 
     @classmethod
@@ -57,19 +33,28 @@ class Generic_API:
         
         data = cls.get_fox(save=True, forceUpdate=True) if saveToDisk else cls.get_fox(save=False, forceUpdate=True)
         
-        if data['image'].find('randomfox.ca') and data['link'].find('randomfox.ca'):
-            print('Response: Valid')
-            return True
-        else:
+        try:
+            if data['image'].find('randomfox.ca') and data['link'].find('randomfox.ca'):
+                print('Response: Valid')
+                return True
+            else:
+                print('Response: Invalid')
+                return False
+        except:
             print('Response: Invalid')
             return False
+            
             
         
             
     # makes request and caches entire response in binary format
     @classmethod
-    def make_query(cls, url):
-        r = requests.get(url)
+    def make_query(cls, url, payload=None, encodeParam=False):
+        if encodeParam and payload:
+            for p in payload.keys():
+                payload[p] = requests.utils.quote(str(payload[p]))
+        
+        r = requests.get(url, params=payload)
             
         printout = f'Status: {r.status_code} {http.client.responses[r.status_code]}'
             
@@ -112,44 +97,22 @@ class Generic_API:
         
 
     @classmethod
-    def cache_response_in_json(cls, r, custom_json_cache=None):
-        json_cache = cls.default_json_cache if custom_json_cache == None else custom_json_cache
+    def cache_response_in_json(cls, r, custom_json_file=None, custom_json_folder='response_json', enumerated=True):
+        folder_path = creat_dir(folder_name=custom_json_folder)
+        
+        json_filename = cls.default_json_cache if custom_json_file == None else custom_json_file
+        json_path = '{path}/{filename}-%s.json'.format(path=folder_path, filename=json_filename)
+        if enumerated: json_path = next_available_path(json_path)
+        else: json_path = json_path % 'volatile'
+        
         try:
-            f = open(file=json_cache, mode='wt')
+            f = open(file=json_path, mode='wt')
             f.write(json.dumps(r.json()))
             f.close()
         except:
             eprint("Error: Cannot convert response to JSON")
             return False
-        return json_cache        
+        return json_path
 
 
-
-# ====================================
-#           Utility Methods
-# ====================================
-
-def creat_dir(folder_name: str) -> str:
-    """helper function that creates directory if not yet exists
-
-        Args:
-            folder_name (str): name of new subdirectory
-
-        Returns:
-            str: complete path to subdirectory
-            
-    """    
-    
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    path = "{directory}/{subdirectory}/".format(directory = dir_path, subdirectory=folder_name)
-    mode = 0o755
-    try:  
-        os.makedirs(path, mode)
-    except OSError:
-        pass
-    return path
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
 
