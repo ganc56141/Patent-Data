@@ -45,7 +45,6 @@ class Generic_API:
             return False
             
             
-        
             
     # makes request and caches entire response in binary format
     @classmethod
@@ -113,6 +112,6 @@ class Generic_API:
             eprint("Error: Cannot convert response to JSON")
             return False
         return json_path
-
-
-
+    
+    
+    

@@ -6,7 +6,6 @@ from utility import *
 from generic_api import Generic_API
 
 
-filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
 token = '1eeb30aba878a2502fb14fb7747f84ff197cf4de'
     
 class PatentHub_API(Generic_API):
