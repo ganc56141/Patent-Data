@@ -1,7 +1,5 @@
 import os, sys
 
-filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
-
 def request_decorator(interface):
     def inner(*args, **kwargs):     # must have inner function to take and transfer the proper arguments
         print("\n----------------------------------")
@@ -17,6 +15,8 @@ def request_decorator(interface):
 # ====================================
 #           Utility Methods
 # ====================================
+
+filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
 
 def creat_dir(folder_name: str, path: str = None) -> str:
     """helper function that creates directory if not yet exists
