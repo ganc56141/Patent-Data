@@ -26,7 +26,7 @@ except Exception:
     DRIVER_PATH_CHROME = 'drivers/chromedriver-91'
     DRIVER_PATH_FIREFOX = 'drivers/geckodriver'
 
-CACHE = 'saved.pickle'
+CACHE = 'html.pickle'
 
 # requires admin privileges (not used in current version)
 def detect_key():
@@ -155,7 +155,7 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
     realtime_html = driver.execute_script('return document.querySelector("html").innerHTML')
     with open(file='tmp.html', mode='wt') as tmp:
         tmp.write(realtime_html)
-    Generic_API.pickle_bytestream(op='dump', data=page_source, custom)
+    Generic_API.pickle_bytestream(op='dump', data=realtime_html, custom_cache=CACHE)
     
     
     if debug == 'console':
@@ -171,7 +171,7 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
 
 
 def parse_patenthub_html(savefile:str ='NEWEST_DATA.json') -> dict:
-    page_source = Generic_API.pickle_response(op='load')
+    page_source = Generic_API.pickle_response(op='load', custom_cache=CACHE)
     soup = BeautifulSoup(markup=page_source, features='html.parser')
     
     # -- initialize data dictionary ---
@@ -219,7 +219,7 @@ def parse_patenthub_html(savefile:str ='NEWEST_DATA.json') -> dict:
 
 def interface(mode:str, categories:list = None):
     if mode == 'scrape':
-        page_source = scrape_patenthub_html_dynamic(debug=False)
+        scrape_patenthub_html_dynamic(debug=False)
         
     
     if mode == 'parse':

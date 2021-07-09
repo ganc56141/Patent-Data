@@ -41,6 +41,20 @@ def creat_dir(folder_name: str, path: str = None) -> str:
     return path
 
 
+def touch(path):
+    # create subdirectories is not exist
+    basedir = os.path.dirname(path)
+    if basedir:
+        if not os.path.exists(basedir):
+            os.makedirs(basedir)
+    
+    # make path (or update time if exists)
+    with open(path, 'a'):
+        os.utime(path, None)
+        
+    return path
+
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 

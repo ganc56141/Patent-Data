@@ -85,7 +85,7 @@ class Generic_API:
                 varies
         """
         cache = custom_cache if custom_cache != None else cls.cache
-        open(file=cache)
+        touch(cache)
         
         if op == "dump":
             with open(cache, 'wb') as outfile:
@@ -103,9 +103,9 @@ class Generic_API:
     
     
     @classmethod
-    def pickle_bytestream(cls, op:str = 'load', data = ''):
+    def pickle_bytestream(*args, **kwargs):
         ''' Alternate interface for 'pickle_response' function '''
-        return cls.pickle_response(op=op, data=data)
+        return cls.pickle_response(*args, **kwargs)
             
     
 
@@ -126,6 +126,3 @@ class Generic_API:
             eprint("Error: Cannot convert response to JSON")
             return False
         return json_path
-    
-    
-    
