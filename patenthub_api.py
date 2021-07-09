@@ -1,13 +1,19 @@
 from typing import *
 import os, requests, json
 import http.client
+from dotenv import load_dotenv
 
 from utility import *
 from generic_api import Generic_API
 
+load_dotenv()
+API_USERNAME = os.environ['USER']
+API_KEY = os.environ['API_KEY']
 
-token = '1eeb30aba878a2502fb14fb7747f84ff197cf4de'
-    
+minPageNum, maxPageNum = 1, 100
+minEntryPerPage, maxEntryPerPage = 10, 50
+
+
 class PatentHub_API(Generic_API):
     @staticmethod
     @request_decorator
@@ -21,7 +27,8 @@ class PatentHub_API(Generic_API):
         if json_path := Generic_API.cache_response_in_json(r, custom_json_file, enumerated=enumerated):
             print(f'JSON exported successfully --> {json_path}')
 
-        return r
+        json_index = json_path.rstrip('.json').rpartition('-')[-1]
+        return json_index
         
     
     @classmethod
@@ -29,13 +36,14 @@ class PatentHub_API(Generic_API):
         api = 'https://www.patenthub.cn/api/s'
         parameters = {
             'ds' : datascope,     # cn / all (meaning global)
-            't' : token,
+            't' : API_KEY,
             'q' : query,
             'p' : page,       # the page number to return 1 to 100
             'ps': pagesize,       # 10-50 entries per page
             'v' : version,
             's' : sorting       # relation, applicationDate, documentDate, rank     (prefix with ! for descending order)
         }
+        
         
         return cls.make_query(api, parameters, custom_json_file='s_port')
         
@@ -45,7 +53,7 @@ class PatentHub_API(Generic_API):
     def base_port(cls, uniqueID, version=1, enumerated=False):
         api = 'https://www.patenthub.cn/api/patent/base'
         parameters = {
-            't' : token,
+            't' : API_KEY,
             'id' : uniqueID,        # the unique ID of that patent
             'v' : version,
         }
@@ -59,7 +67,7 @@ class PatentHub_API(Generic_API):
     def ration_port(cls, query, version=1, datascope='all', category='countryCode'):
         api = 'https://www.patenthub.cn/api/ration'
         parameters = {
-            't' : token,
+            't' : API_KEY,
             'ds' : datascope,        # the unique ID of that patent
             'v' : version,
             'q' : query,
@@ -74,11 +82,32 @@ class PatentHub_API(Generic_API):
     def used_port(cls, apiURL, version=1):
         api = 'https://www.patenthub.cn/api/used'
         parameters = {
-            't' : token,
+            't' : API_KEY,
             'v' : version,
             'apiUrl' : apiURL.replace('/', '%2F'),        # the unique ID of that patent
         }
         
         return cls.make_query(api, parameters, custom_json_file='used_port', enumerated=False)
+        
+    @classmethod
+    def query_by_year_and_country(cls, query, start_year:int, end_year:int = None, countryCode='US', sorting='!applicationDate'):
+        end_year = end_year or start_year
+        year_range = f'applicationYear:[{start_year} TO {end_year}]'
+        country = f'countryCode:{countryCode}'
+        
+        logical_query = ' AND '.join([query, year_range, country])
+        
+        
+        json_index = cls.s_port(
+            query=logical_query,
+            datascope='all',
+            page=1,
+            pagesize=maxEntryPerPage,
+            sorting='!applicationDate'
+        )
+        
+        return json_index
+        
+        
         
         

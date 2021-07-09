@@ -5,10 +5,12 @@ def request_decorator(interface):
         print("\n----------------------------------")
         print("         Start of Request\n")
         
-        interface(*args, **kwargs)
+        return_value = interface(*args, **kwargs)
 
         print("\n         End Of Request")
         print("----------------------------------\n")
+        
+        return return_value
     return inner
 
 

@@ -7,39 +7,43 @@ import os, json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+    
 
-minPageNum, maxPageNum = 1, 100
-minEntryPerPage, maxEntryPerPage = 10, 50
+country_codes = None
+
+def init_country_codes():
+    global country_codes
+    df = pd.read_csv('country_codes.csv')
+    country_codes = df.set_index('Name').T.to_dict('list')
+    for name, code in country_codes.items():
+        country_codes[name] = code[0]
 
 
 def obtain_data():
-    for pg in range(1, 10):
+    # for pg in range(1, 10):
         
-        PatentHub_API.s_port(
-            query='电器',
-            datascope='CN',
-            page=pg,
-            pagesize=maxEntryPerPage,
-            sorting='!applicationDate'
-        )
+        # PatentHub_API.s_port(
+        #     query='电器',
+        #     datascope='CN',
+        #     page=pg,
+        #     pagesize=maxEntryPerPage,
+        #     sorting='!applicationDate'
+        # )
     
-    # PatentHub_API.base_port(
-    #     uniqueID='JP3558752B2',
-    # )
+    
+    # can classify using IPC in query???    
 
+    index = PatentHub_API.query_by_year_and_country(
+        query='electronic',
+        start_year=2010, 
+        end_year=2020, 
+        countryCode=country_codes['United Kingdom']
+    )
+    print(index)
     
-    # PatentHub_API.ration_port(
-    #     query='2010',
-    #     category='applicationYear'
-    # )
-    
-    
-    # PatentHub_API.used_port(
-    #     apiURL = '/api/patent/base'
-    # )
-    
-    
-    
+
+
+
 def json_to_csv():
     df = pd.read_json (r'clean_json/s_port-11-clean.json')
     df.to_csv (r'TRIAL.csv', index = None)
@@ -195,10 +199,12 @@ def graph_csv(filename, directory='csv', mode=1):
 
 def main():
     # PatentHub_API.test_connectivity(saveToDisk=False)
-    # obtain_data()
+    init_country_codes()
+    obtain_data()
+    # compile_responses_to_csv(response_name='s_port', start=29, end=29)
     # compile_responses_to_csv(response_name='s_port', start=13, end=21)
     # graph_csv(filename='s_port-13-21')
-    graph_csv(filename='china_dev', directory='csv_external', mode=2)
+    # graph_csv(filename='china_dev', directory='csv_external', mode=2)
 
     
     

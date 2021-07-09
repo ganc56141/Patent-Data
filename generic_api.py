@@ -10,32 +10,36 @@ class Generic_API:
     default_json_cache = 'response.json'
     
     @classmethod
-    def get_fox(cls, save: bool = False, forceUpdate: bool = False) -> None:
+    def get_fox(cls, forceUpdate: bool = False) -> None:
         api = 'https://randomfox.ca/floof'
         
         # getting response
         r = cls.pickle_response(op="load")
         if forceUpdate or not r:
             Generic_API.make_query(url=api)
-            
-        if save: 
-            cls.cache_response_in_json(r, custom_json_file="test_api")
         
-        data = r.json()
+        return r
         # print('Response = ' + json.dumps(data) +'\n')
-        return data
 
     @classmethod
     @request_decorator
-    def test_connectivity(cls, method='fox', saveToDisk=False) -> bool:
+    def test_connectivity(cls, method='fox', saveToDisk=False) -> int:
         # will implement others methods in the future
         print("Running Test API...")
         
-        data = cls.get_fox(save=True, forceUpdate=True) if saveToDisk else cls.get_fox(save=False, forceUpdate=True)
+        r = cls.get_fox(forceUpdate=True)
+        data = r.json()
         
         try:
             if data['image'].find('randomfox.ca') and data['link'].find('randomfox.ca'):
                 print('Response: Valid')
+                
+                if saveToDisk:
+                    json_path = cls.cache_response_in_json(r, custom_json_file="test_api")
+                    json_index = json_path.rstrip('.json').rpartition('-')[-1]
+                    print(json_index)
+                    return json_index
+                
                 return True
             else:
                 print('Response: Invalid')
@@ -43,7 +47,8 @@ class Generic_API:
         except:
             print('Response: Invalid')
             return False
-            
+    
+
             
             
     # makes request and caches entire response in binary format
@@ -66,7 +71,7 @@ class Generic_API:
 
 
     @classmethod
-    def pickle_response(cls, op: str = "load", data = ""):
+    def pickle_response(cls, op: str = "load", data = "", custom_cache:str = None):
         """allows simple caching of data
 
             Args:
@@ -79,21 +84,30 @@ class Generic_API:
             Returns:
                 varies
         """
+        cache = custom_cache if custom_cache != None else cls.cache
+        open(file=cache)
         
         if op == "dump":
-            with open(cls.cache, 'wb') as outfile:
+            with open(cache, 'wb') as outfile:
                 pickle.dump(data, outfile)
                 
         elif op == "load":
-            if os.path.isfile(cls.cache):
-                with open(cls.cache, 'rb') as infile:
+            if os.path.isfile(cache):
+                with open(cache, 'rb') as infile:
                     return pickle.load(infile)
             else:
                 return False
         
         else:
             raise Exception(f'{op} not implemented')
-        
+    
+    
+    @classmethod
+    def pickle_bytestream(cls, op:str = 'load', data = ''):
+        ''' Alternate interface for 'pickle_response' function '''
+        return cls.pickle_response(op=op, data=data)
+            
+    
 
     @classmethod
     def cache_response_in_json(cls, r, custom_json_file=None, custom_json_folder='response_json', enumerated=True):

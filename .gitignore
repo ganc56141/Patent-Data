@@ -1,5 +1,8 @@
 # Project Specific
 response_json/
+drivers/
+geckodriver.log
+
 
 # Apple filing byproduct
 .DS_Store/
