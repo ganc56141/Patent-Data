@@ -6,20 +6,22 @@ import pickle
 
 
 class Generic_API:
-    cache = 'saved.pickle'
-    default_json_cache = 'response.json'
+    cache = 'cache/saved.pickle'
+    default_json_cache = 'cache/response.json'
     
     @classmethod
     def get_fox(cls, forceUpdate: bool = False) -> None:
-        api = 'https://randomfox.ca/floof'
+        api = 'https://randomfox.ca/floof/'
         
         # getting response
+        
         r = cls.pickle_response(op="load")
         if forceUpdate or not r:
-            Generic_API.make_query(url=api)
+            r = Generic_API.make_query(url=api)
         
         return r
         # print('Response = ' + json.dumps(data) +'\n')
+
 
     @classmethod
     @request_decorator
@@ -35,7 +37,7 @@ class Generic_API:
                 print('Response: Valid')
                 
                 if saveToDisk:
-                    json_path = cls.cache_response_in_json(r, custom_json_file="test_api")
+                    json_path = cls.cache_response_in_json(r, custom_json_file="cache/test_api")
                     json_index = json_path.rstrip('.json').rpartition('-')[-1]
                     print(json_index)
                     return json_index
@@ -92,10 +94,10 @@ class Generic_API:
                 pickle.dump(data, outfile)
                 
         elif op == "load":
-            if os.path.isfile(cache):
+            try:
                 with open(cache, 'rb') as infile:
                     return pickle.load(infile)
-            else:
+            except Exception:
                 return False
         
         else:
@@ -103,20 +105,20 @@ class Generic_API:
     
     
     @classmethod
-    def pickle_bytestream(*args, **kwargs):
+    def pickle_bytestream(cls, *args, **kwargs):
         ''' Alternate interface for 'pickle_response' function '''
         return cls.pickle_response(*args, **kwargs)
             
     
 
     @classmethod
-    def cache_response_in_json(cls, r, custom_json_file=None, custom_json_folder='response_json', enumerated=True):
-        folder_path = creat_dir(folder_name=custom_json_folder)
+    def cache_response_in_json(cls, r, custom_json_file=None, enumerated=True):
+        json_path = custom_json_file if custom_json_file != None else cls.default_json_cache
+        json_path = format_path_for_enumeration(json_path)
         
-        json_filename = cls.default_json_cache if custom_json_file == None else custom_json_file
-        json_path = '{path}/{filename}-%s.json'.format(path=folder_path, filename=json_filename)
         if enumerated: json_path = next_available_path(json_path)
         else: json_path = json_path % 'volatile'
+        touch(json_path)
         
         try:
             f = open(file=json_path, mode='wt')

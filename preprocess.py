@@ -9,14 +9,27 @@ import pandas as pd
 import matplotlib.pyplot as plt
     
 
-country_codes = None
+country_to_code = {}
+code_to_country = {}
+DATA_PATH = 'json_data'
 
 def init_country_codes():
     global country_codes
     df = pd.read_csv('country_codes.csv')
     country_codes = df.set_index('Name').T.to_dict('list')
     for name, code in country_codes.items():
-        country_codes[name] = code[0]
+        country_to_code[name] = code[0]
+        code_to_country[code[0]] = name
+    
+    # 2 special cases
+    code_to_country['WO'] = 'WIPO'
+    code_to_country['EP'] = 'European Union'
+    
+    country_to_code['WIPO'] = 'WO'
+    country_to_code['European Union'] = 'EP'
+    
+    
+        
 
 
 def obtain_data():
@@ -70,7 +83,7 @@ def compile_responses_to_csv(response_name, start=None, end=None, response_direc
         
     df = pd.DataFrame(patents)
     
-    csv_path = creat_dir('csv')
+    csv_path = creat_dir('csv_from_api')
     df.to_csv(f'{csv_path}/{response_name}-{start}-{end}.csv', index = True)
 
 
@@ -194,15 +207,60 @@ def graph_csv(filename, directory='csv', mode=1):
             raise Exception(f'Mode \"{mode}\" Not Implemented')
         
         
+        
+def compile_json_data_by_year(start, end):
+    organized_data = {}
     
+    for year in reversed(range(start, end+1)):
+        path = '{folder}/{year}.json'.format(folder=DATA_PATH, year=year)
+        with open(file=path, mode='rt') as infile:
+            data = json.load(infile)
+        
+        for entry in data['countryCode']:
+            name_cn, code, cnt = entry[0], entry[1].upper(), entry[2]
+            # name_en = code_to_country[code]     
+            country_fullname = f'{name_cn} ({code})'
+            # country_fullname = f'{name_en} ({code})'
+            
+            entry = {year:cnt}
+            country_data = organized_data.get(country_fullname, {})
+            country_data.update(entry)
+            organized_data[country_fullname] = country_data
+            
+    df = pd.DataFrame(organized_data).transpose()
+    csv_path = creat_dir('csv_data_compiled')
+    df.to_csv(f'{csv_path}/{start}-{end}.csv', index = True)
+    
+    return organized_data
+
 
 
 def main():
-    # PatentHub_API.test_connectivity(saveToDisk=False)
     init_country_codes()
-    obtain_data()
-    # compile_responses_to_csv(response_name='s_port', start=29, end=29)
-    # compile_responses_to_csv(response_name='s_port', start=13, end=21)
+    # print(code_to_country)
+    # print(code_to_country['US'])
+    data = compile_json_data_by_year(1900, 2020)
+    
+    years = [i for i in range(1980, 2020+1)]
+    country_names = [ name.split('(')[-1][0:2] for name in data.keys() ]
+    country_data = []
+    
+    for value in data.values():
+        cnts = []
+        for y in years:
+            cnts.append(value.get(y, 0))
+        
+        country_data.append(cnts)
+    
+    
+    plot_generic (
+                x = years,
+                curves = list(country_data[0:6]),
+                labels = list(country_names[0:6]),
+                filename = 'patent_by_years',
+                title = 'patent count per country per year',
+                custom_width = 30,)
+    
     # graph_csv(filename='s_port-13-21')
     # graph_csv(filename='china_dev', directory='csv_external', mode=2)
 

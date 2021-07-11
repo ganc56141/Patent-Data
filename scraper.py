@@ -1,4 +1,4 @@
-import requests, time
+import requests, time, datetime
 from typing import Generic
 from bs4 import BeautifulSoup
 from decouple import config
@@ -12,7 +12,7 @@ import pandas as pd
 import json
 
 from generic_api import Generic_API
-from utility import eprint
+from utility import eprint, touch, HiddenPrints, Dots
 
 
 API_USERNAME = config('USER')
@@ -26,7 +26,10 @@ except Exception:
     DRIVER_PATH_CHROME = 'drivers/chromedriver-91'
     DRIVER_PATH_FIREFOX = 'drivers/geckodriver'
 
-CACHE = 'html.pickle'
+CACHE = 'cache/html.pickle'
+JSON_DATA_PATH = 'json_data'
+CSV_DATA_PATH = 'csv_data'
+JAVASCRIPT_DELAY = 8
 
 # requires admin privileges (not used in current version)
 def detect_key():
@@ -71,9 +74,9 @@ def scrape_patenthub_html_static():
 
 
 
-def scrape_patenthub_html_dynamic(debug=None) -> str:
+def scrape_patenthub_html_dynamic(target_url:str, debug:str=None, suppressError=True) -> str:
     dummy_url = 'https://www.patenthub.cn/this404page'
-    url = 'https://www.patenthub.cn/s?ds=all&dm=mix&p=&ps=10&s=score%21&q2=&m=none&fc=%5B%5D&q=5g'
+    url = target_url
 
     cjar = http.cookiejar.MozillaCookieJar(COOKIE_PATH)
     cjar.load()
@@ -90,7 +93,7 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
     options = webdriver.ChromeOptions()
     options.add_experimental_option('detach', True)
     options.add_argument('window-size=1200x600') # optional
-    # options.add_argument('headless')
+    options.add_argument('headless')
     driver = webdriver.Chrome(executable_path=DRIVER_PATH_CHROME, options=options)
     
     
@@ -105,29 +108,34 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
     # Set the interceptor on the driver
     driver.request_interceptor = interceptor
 
+    # hides some weird library errors
     try:
+        print('Phase 1: Requesting page... ', end='')
         driver.get(dummy_url)
-        print('============>\nPAGE LOADED!\n============>\n')
 
         # driver.delete_all_cookies()
         for cookie in json_cookies:
             driver.delete_cookie(cookie['name'])
             driver.add_cookie(cookie)
 
-        print('done adding cookies')
-
-        driver.get(url)
-        # driver.refresh()
+        if suppressError:
+            # suppresses some VPN related printouts
+            with HiddenPrints():
+                driver.get(url)
+        else:
+            driver.get(url)
+            # driver.refresh()
         
-        input("REQUEST PHASE ENDED\n")
+        print("Done")
 
         
     except Exception as e:
-        print(e)
+        pass
         
         
     # reveal all hidden items
-    def expand_hidden_items(driver):        
+    def expand_hidden_items(driver) -> int:        
+        print('Phase 2: script injections... ', end='')
         base_path = '/html/body/div[3]/div[2]/div[1]/div/div[%i]/a'
         try:
             driver.find_element_by_xpath(xpath= (base_path % 2) )
@@ -136,26 +144,50 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
             return False
         
         i = 2
+        cnt = 0
         js_script_action = 'arguments[0].click()'
         while 1:
             try:
                 clickable = driver.find_element_by_xpath(xpath= (base_path % i) )
                 driver.execute_script(js_script_action, clickable)
+                cnt += 1
             except:
                 break
             i += 1
-        time.sleep(1)
-        print('Done: expanded all items.')
-        return True
+        print('Done')
+        return cnt
             
-    expand_hidden_items(driver)
+    hidden_item_cnt = expand_hidden_items(driver)
+    
+    # additional wait feature to make sure hidden content has been loaded
+    print("Phase 2.1: script executing...", flush=True)
+    while 1:
+        soup = BeautifulSoup(markup=driver.page_source, features='html.parser')
+        activated = soup.find_all(name='div', class_='content active')
+        if len(activated) < hidden_item_cnt + 1:        # +1 since one content was active by default (thus not hidden)
+            continue
+        else:
+            break
+    
+    # spin wait (appaently time.sleep stops EVERYTHING, not applicable here)
+    start = time.monotonic()
+    dots = Dots()
+    dots.start()
+    while time.monotonic() - start < JAVASCRIPT_DELAY:
+        pass
+    dots.stop()
+        
 
-    input("Press Enter to save page source")
-    static_html = driver.page_source
-    realtime_html = driver.execute_script('return document.querySelector("html").innerHTML')
-    with open(file='tmp.html', mode='wt') as tmp:
+    print("Phase 3: saving page source... ", end='')
+    realtime_html = driver.page_source
+    # realtime_html = driver.execute_script('return document.querySelector("html").innerHTML')
+    
+    path = touch('cache/human_readable.html')
+    with open(file=path, mode='wt') as tmp:
         tmp.write(realtime_html)
     Generic_API.pickle_bytestream(op='dump', data=realtime_html, custom_cache=CACHE)
+    
+    print("Done")
     
     
     if debug == 'console':
@@ -170,13 +202,13 @@ def scrape_patenthub_html_dynamic(debug=None) -> str:
     return realtime_html
 
 
-def parse_patenthub_html(savefile:str ='NEWEST_DATA.json') -> dict:
+def parse_patenthub_html(savefile:str =f'{JSON_DATA_PATH}/NEWEST_DATA.json', category='N/A') -> dict:
     page_source = Generic_API.pickle_response(op='load', custom_cache=CACHE)
     soup = BeautifulSoup(markup=page_source, features='html.parser')
     
     # -- initialize data dictionary ---
     stats = {}
-    stats.update( {'category': '5g',
+    stats.update( {'category': category,
                 'countryCode': None} )
     
     # --- get patent by country ---
@@ -204,23 +236,78 @@ def parse_patenthub_html(savefile:str ='NEWEST_DATA.json') -> dict:
         content = dd.parent.find(name='div', class_='content active')
         content_entries = content.find_all(name='li')
         for entry in content_entries:
+            if entry.text.find('无数据') != -1:
+                data.append( [None, '0'] )
+                break
             entry_key = entry.find(name='span', class_='key').text
             entry_val = entry.find(name='span', class_='doc-count').text
             data.append( [entry_key, entry_val] )
         stats[item_name_eng] = data
     
-    
+    touch(savefile)
     with open(file=savefile, mode='wt') as f:
         json.dump(stats, f)
     
     return stats
     
+    
+def check_exists(html:str, name:str, attrs:dict) -> bool:
+    """Check whether a certain DOM element exists in given html page
+
+    Args:
+        html (str): the html source page
+        name (str): tag name 
+        attrs (dict): tag attributes
+
+    Returns:
+        bool: exists=True, nonexistant=False
+    """
+    
+    soup = BeautifulSoup(markup=html, features='html.parser')
+    exists = soup.find(name=name, attrs=attrs)
+
+    return exists
+    
+    
 
 
+def pull_data_by_year(start=None, end=None, delay=1):
+    start = start if start != None else 1421       # first patent ever was granted in 1421 in Florence
+    
+    # string = 'https://www.patenthub.cn/s?ds=all&dm=mix&p=&ps=10&s=score%21&q2=&m=none&fc=%5B%5D&q=5g'
+    query_by_year = 'https://www.patenthub.cn/s?ds=all&dm=mix&s=score%21&q=applicationYear%3A'
+    
+    for year in reversed(range(start, end+1)):
+        print(f'Retriving {year} data...')
+        start = time.perf_counter()
+        query = query_by_year + str(year)
+        
+        try:
+            html = scrape_patenthub_html_dynamic(target_url=query)
+        except Exception:
+            eprint(f'Internal Error: Data Retrieved from {year+1} to {end}.")')
+            return
+        
+        if not check_exists(html, name='div', attrs={'id': 'countryCode'}):
+            print(f"DONE. Data Retrieved from {year+1} to {end}.")
+            return
+        else:
+            print('POSTPROCESSING: Parsing + Saving Data...')
+            parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{year}.json', category=str(year))
+            
+            print(f'Complete! -- {time.perf_counter() - start:.2f}s\n')
+        
+        time.sleep(delay)
+        
+    print(f"DONE. Data Retrieved from {start} to {end}.")
+    return
+
+
+# deprecated
 def interface(mode:str, categories:list = None):
     if mode == 'scrape':
-        scrape_patenthub_html_dynamic(debug=False)
-        
+        current_year = datetime.datetime.today().year
+        pull_data_by_year(end=current_year)
     
     if mode == 'parse':
         clean_data = parse_patenthub_html()
@@ -228,30 +315,30 @@ def interface(mode:str, categories:list = None):
         
         
 
-# not implemented yet
+# upcoming feature
 def test_limit(num=10):
     from random_word import RandomWords
     print(RandomWords().get_random_word())
     ...
     
-    
+# upcoming feature
+def export_as_xml():    
+    with open('NEWEST_DATA.json', mode='rt') as f:
+        x = json.load(f)
+        from dict2xml import dict2xml
+        xml = dict2xml(x)
+        f2 = open(file='NEWEST_DATA.xml', mode='wt')
+        f2.write(xml)
 
+
+    
 def main():
-    
-    # interface(mode='scrape')
-    interface(mode='parse')
-    # with open('NEWEST_DATA.json', mode='rt') as f:
-    #     x = json.load(f)
-    #     from dict2xml import dict2xml
-    #     xml = dict2xml(x)
-    #     f2 = open(file='NEWEST_DATA.xml', mode='wt')
-    #     f2.write(xml)
+    pull_data_by_year(start=2021, end=2021, delay=1)
+    # parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{1983}.json', category=str(1983))
 
     
-
-
-
-
+    
+    
 
 if __name__ == '__main__':
     main()    
