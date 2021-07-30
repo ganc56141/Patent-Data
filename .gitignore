@@ -2,6 +2,8 @@
 response_json/
 drivers/
 geckodriver.log
+wb_cache.sqlite
+cache/
 
 
 # Apple filing byproduct

@@ -13,6 +13,7 @@ import json
 
 from generic_api import Generic_API
 from utility import eprint, touch, HiddenPrints, Dots
+import preprocess
 
 
 API_USERNAME = config('USER')
@@ -158,6 +159,9 @@ def scrape_patenthub_html_dynamic(target_url:str, debug:str=None, suppressError=
         return cnt
             
     hidden_item_cnt = expand_hidden_items(driver)
+    if hidden_item_cnt == False:
+        driver.close()
+        return False
     
     # additional wait feature to make sure hidden content has been loaded
     print("Phase 2.1: script executing...", flush=True)
@@ -194,7 +198,10 @@ def scrape_patenthub_html_dynamic(target_url:str, debug:str=None, suppressError=
         print("Engaging Interactive Console... \n")
         while 1:
             try:
-                exec(input(">>> "))
+                tmp_ = None
+                exec(f'tmp_ = {input(">>> ")}')
+                if tmp_ != None:
+                    print(tmp_)
             except Exception as e:
                 print(e)
         
@@ -271,19 +278,24 @@ def check_exists(html:str, name:str, attrs:dict) -> bool:
     
 
 
-def pull_data_by_year(start=None, end=None, delay=1):
+def pull_data_by_year(start=None, end=None, mode=1, delay=1):
     start = start if start != None else 1421       # first patent ever was granted in 1421 in Florence
     
     # string = 'https://www.patenthub.cn/s?ds=all&dm=mix&p=&ps=10&s=score%21&q2=&m=none&fc=%5B%5D&q=5g'
-    query_by_year = 'https://www.patenthub.cn/s?ds=all&dm=mix&s=score%21&q=applicationYear%3A'
+    if mode == 1: query_by_year = 'https://www.patenthub.cn/s?ds=all&dm=mix&s=score%21&q=applicationYear%3A'
+    if mode == 2: query_by_year = 'https://www.patenthub.cn/s?ds=all&dm=mix&s=score%21&q=documentDate%3A'
     
     for year in reversed(range(start, end+1)):
         print(f'Retriving {year} data...')
-        start = time.perf_counter()
+        s = time.perf_counter()
         query = query_by_year + str(year)
         
         try:
             html = scrape_patenthub_html_dynamic(target_url=query)
+            if html == False:       # probably not found
+                print(f'\n\n--- Skipping {year}: No Data Available ---\n')
+                continue
+            
         except Exception:
             eprint(f'Internal Error: Data Retrieved from {year+1} to {end}.")')
             return
@@ -293,14 +305,45 @@ def pull_data_by_year(start=None, end=None, delay=1):
             return
         else:
             print('POSTPROCESSING: Parsing + Saving Data...')
-            parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{year}.json', category=str(year))
+            if mode == 1: parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{year}.json', category=str(year))
+            elif mode == 2: parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/_{year}.json', category=str(year))
             
-            print(f'Complete! -- {time.perf_counter() - start:.2f}s\n')
+            print(f'Complete! -- {time.perf_counter() - s:.2f}s\n')
         
         time.sleep(delay)
         
     print(f"DONE. Data Retrieved from {start} to {end}.")
     return
+
+
+# this can only be run after compiling a CSV with query-able? country names
+def pull_data_by_country(delay=1):
+    query_by_country = 'https://www.patenthub.cn/s?ds=all&dm=mix&s=score%21&q=countryCode%3A'    
+    codes = preprocess.get_known_country_codes('csv_data_compiled/1900-2021.csv')
+    
+    import os
+    for i, code in enumerate(codes):
+        if os.path.exists(f'json_data/{code}.json'): continue
+        print(f'{i}/{len(codes)}: Retriving {code} data...')
+        query = query_by_country + code
+        
+        s = time.perf_counter()
+        try:
+            scrape_patenthub_html_dynamic(target_url=query)
+        except Exception:
+            eprint(f'Internal Error: Data Not Retrieved for Country {code}.")')
+            return
+
+        else:
+            print('POSTPROCESSING: Parsing + Saving Data...')
+            parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{code}.json', category=str(code))
+            
+            print(f'Complete! -- {time.perf_counter() - s:.2f}s\n')
+     
+     
+    print(f"DONE. Data Retrieved for {len(codes)} countries.")
+    return   
+    
 
 
 # deprecated
@@ -333,7 +376,8 @@ def export_as_xml():
 
     
 def main():
-    pull_data_by_year(start=2021, end=2021, delay=1)
+    pull_data_by_year(start=1800, end=1842, delay=1, mode=2)
+    # pull_data_by_country()
     # parse_patenthub_html(savefile=f'{JSON_DATA_PATH}/{1983}.json', category=str(1983))
 
     

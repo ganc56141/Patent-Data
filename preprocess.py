@@ -6,7 +6,7 @@ from utility import eprint, next_available_path
 import os, json
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
     
 
 country_to_code = {}
@@ -22,12 +22,16 @@ def init_country_codes():
         code_to_country[code[0]] = name
     
     # 2 special cases
-    code_to_country['WO'] = 'WIPO'
-    code_to_country['EP'] = 'European Union'
-    
-    country_to_code['WIPO'] = 'WO'
-    country_to_code['European Union'] = 'EP'
-    
+    special_cases = {
+        'WO': 'WIPO',
+        'EP': 'European Union',
+        'EA': 'Eurasian Patent Organization',
+        'AP': 'African Regional Intellectual Property Organization',
+        'OA': 'African Intellectual Property Organization',
+    }
+    for key, value in special_cases.items():
+        code_to_country[key] = value
+        country_to_code[value] = key
     
         
 
@@ -201,15 +205,15 @@ def graph_csv(filename, directory='csv', mode=1):
                 custom_width = 30,
             )
             
-            
         
         else:
             raise Exception(f'Mode \"{mode}\" Not Implemented')
         
         
         
-def compile_json_data_by_year(start, end):
+def compile_json_data_by_year(start, end, lang='CN'):
     organized_data = {}
+    lang = lang.upper()
     
     for year in reversed(range(start, end+1)):
         path = '{folder}/{year}.json'.format(folder=DATA_PATH, year=year)
@@ -218,9 +222,11 @@ def compile_json_data_by_year(start, end):
         
         for entry in data['countryCode']:
             name_cn, code, cnt = entry[0], entry[1].upper(), entry[2]
-            # name_en = code_to_country[code]     
             country_fullname = f'{name_cn} ({code})'
-            # country_fullname = f'{name_en} ({code})'
+            
+            if lang == 'EN':
+                name_en = code_to_country[code]
+                country_fullname = f'{name_en} ({code})'
             
             entry = {year:cnt}
             country_data = organized_data.get(country_fullname, {})
@@ -229,19 +235,15 @@ def compile_json_data_by_year(start, end):
             
     df = pd.DataFrame(organized_data).transpose()
     csv_path = creat_dir('csv_data_compiled')
-    df.to_csv(f'{csv_path}/{start}-{end}.csv', index = True)
+    
+    if lang == 'CN': df.to_csv(f'{csv_path}/{start}-{end}-CN.csv', index = True)
+    if lang == 'EN': df.to_csv(f'{csv_path}/{start}-{end}-EN.csv', index = True)
     
     return organized_data
 
 
-
-def main():
-    init_country_codes()
-    # print(code_to_country)
-    # print(code_to_country['US'])
-    data = compile_json_data_by_year(1900, 2020)
-    
-    years = [i for i in range(1980, 2020+1)]
+def plot_by_country(data):
+    years = [i for i in range(1980, 2021+1)]
     country_names = [ name.split('(')[-1][0:2] for name in data.keys() ]
     country_data = []
     
@@ -260,9 +262,61 @@ def main():
                 filename = 'patent_by_years',
                 title = 'patent count per country per year',
                 custom_width = 30,)
+
+
+def get_known_country_codes(csv_name:str):
+    with open(file=csv_name, mode='rt') as f:
+        df = pd.read_csv(f)
+    country_data = list(df.iloc[:, 0])
+    
+    known_codes = []
+    for name in country_data:
+        known_codes.append( name.split('(')[-1][0:2] )
+        
+    return known_codes
+    
+
+
+def compile_patenthub_dataframe(start=2015, end=2021):
+    compile_json_data_by_year(start, end, lang='EN')
+    with open(file=f'csv_data_compiled/{start}-{end}-EN.csv', mode='rt') as f:
+        df = pd.read_csv(f)
+    fullnames = list(df.iloc[:, 0])
+    codes = [ name.split('(')[-1][0:2] for name in fullnames ]
+    
+    df.rename(columns = {'Unnamed: 0':'Country'}, inplace = True)
+    df = df.set_index('Country')     # set country names as index column
+    df = df.iloc[:, ::-1]   # order list into ascending chronological order
+    
+    return df
+
+
+
+def main():
+    init_country_codes()
+    df = compile_patenthub_dataframe(start=2010, end=2021)
+    
+    
+    sub_df = df.iloc[0:5, :]
+    stacked_df = sub_df.apply(lambda x: x*100/sum(x), axis=1)
+    
+    # sub_df.plot.bar(stacked=True, 
+    # y = list(sub_df.iloc[:, ::-1]) )
+    sub_df.transpose().plot.line()
+    stacked_df.plot.bar(stacked=True, )
+    
+    plt.xticks(rotation=30, horizontalalignment='center')
+    plt.show()
+    
+
+    # get_known_country_codes('csv_data_compiled/1900-2021.csv')
+    
+    
+
     
     # graph_csv(filename='s_port-13-21')
-    # graph_csv(filename='china_dev', directory='csv_external', mode=2)
+    # graph_csv(filename='china_dev', directory='csv_
+    # ternal', mode=2)
 
     
     

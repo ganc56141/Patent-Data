@@ -5,11 +5,18 @@ class Dots:     # for user entertainment
         def __init__(self, num_dots=5):
                 self.num_dots = num_dots
                 self.done_flag = 0
+                
         # __call__ is not working with multithreading, needs fixing
         def __call__(self, status):
                 if status == 0: self.start()
                 elif status == 1: self.stop()
                 else: print("Error: Invalid Dot Animation State", flush=True)
+        
+        def __enter__(self):
+            self.start()
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self.stop()
         
         def start(self):
                 def begin_loading(num_dots):
