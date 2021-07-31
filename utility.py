@@ -6,7 +6,7 @@ class Dots:     # for user entertainment
                 self.num_dots = num_dots
                 self.done_flag = 0
                 
-        # __call__ is not working with multithreading, needs fixing
+        # NOTE:__call__ is not working with multithreading, needs fixing
         def __call__(self, status):
                 if status == 0: self.start()
                 elif status == 1: self.stop()
@@ -71,7 +71,6 @@ class HiddenPrints:
         
 
 
-filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
 
 def creat_dir(folder_name: str, path: str = None) -> str:
     """helper function that creates directory if not yet exists
@@ -83,6 +82,7 @@ def creat_dir(folder_name: str, path: str = None) -> str:
             str: complete path to subdirectory
             
     """    
+    filepath = os.path.dirname(os.path.realpath(__file__))          # NOT os.getcwd() <——> this incantation is faulty
     
     dir_path = filepath if path==None else path
     path = "{directory}/{subdirectory}".format(directory = dir_path, subdirectory=folder_name)
@@ -97,7 +97,7 @@ def creat_dir(folder_name: str, path: str = None) -> str:
 def touch(path):
     if path == None: return None
     
-    # create subdirectories is not exist
+    # create subdirectories if not exist
     basedir = os.path.dirname(path)
     if basedir == None: return None
     
