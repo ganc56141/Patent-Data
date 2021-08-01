@@ -242,8 +242,8 @@ def main():
     # 1. get select indicators
     # GDP at PPP, GNI per capita, Urban population, Literacy rate (adult total), mortality rate (neonatal)
     indicators = ['NY.GDP.MKTP.CD', "NY.GNP.PCAP.CD", "SP.URB.TOTL", "SE.ADT.LITR.ZS", "SH.DYN.NMRT", "NY.ADJ.SVNX.CD"]
-    # buildDataSet_sequential(indicators, folderpath='dev_data_selected')
-    # print('Done. SELECTED indicator data retrieved.\n')
+    buildDataSet_sequential(indicators, folderpath='dev_data_selected')
+    print('Done. SELECTED indicator data retrieved.\n')
     
     # 2. get all indicators
     table = getIndicatorTable()

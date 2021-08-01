@@ -15,7 +15,7 @@ DATA_PATH = 'json_data'
 
 def init_country_codes():
     global country_codes
-    df = pd.read_csv('country_codes.csv')
+    df = pd.read_csv('references/country_codes.csv')
     country_codes = df.set_index('Name').T.to_dict('list')
     for name, code in country_codes.items():
         country_to_code[name] = code[0]
@@ -28,6 +28,13 @@ def init_country_codes():
         'EA': 'Eurasian Patent Organization',
         'AP': 'African Regional Intellectual Property Organization',
         'OA': 'African Intellectual Property Organization',
+        'GC': 'The Patent Office of the Gulf Cooperation Council',
+        'YU': 'Yugoslavia',
+        'DD': 'German Democratic Republic',
+        'SU': 'Soviet Union',
+        'CS': 'Czechoslovakia',
+        'EM': 'Office for Harmonization in the Internal Market',
+        
     }
     for key, value in special_cases.items():
         code_to_country[key] = value
@@ -211,7 +218,9 @@ def graph_csv(filename, directory='csv', mode=1):
         
         
         
-def compile_json_data_by_year(start, end, lang='CN'):
+def compile_json_data_by_year(start, end, lang='CN', suppressPrint=False):
+    if len(code_to_country) == 0:
+        init_country_codes()
     organized_data = {}
     lang = lang.upper()
     
@@ -225,7 +234,11 @@ def compile_json_data_by_year(start, end, lang='CN'):
             country_fullname = f'{name_cn} ({code})'
             
             if lang == 'EN':
-                name_en = code_to_country[code]
+                try:
+                    name_en = code_to_country[code]
+                except:
+                    eprint(f'cannot find English name for: {code}')
+                    continue
                 country_fullname = f'{name_en} ({code})'
             
             entry = {year:cnt}
@@ -238,6 +251,9 @@ def compile_json_data_by_year(start, end, lang='CN'):
     
     if lang == 'CN': df.to_csv(f'{csv_path}/{start}-{end}-CN.csv', index = True)
     if lang == 'EN': df.to_csv(f'{csv_path}/{start}-{end}-EN.csv', index = True)
+    
+    if not suppressPrint:
+        print(f'Done. {start}-{end} Compiled.')
     
     return organized_data
 

@@ -1,1 +1,33 @@
-{"category": "1825", "countryCode": [["\u7f8e\u56fd", "us", "6"]], "legalStatus": [["\u672a\u77e5", "6"]], "applicationYear": [["1825", "6"]], "documentYear": [["1924", "3"], ["1923", "2"], ["1917", "1"]], "applicant": [["Kelly", "1"], ["R", "1"], ["The Edward N", "1"], ["The Fisk Rubber company", "1"]], "applicantCountryCode": [[null, "0"]], "inventor": [["Armond D. Mathys", "1"], ["Frank S. Crowell", "1"], ["Hugo Battm", "1"], ["Reginald H. Waters", "1"], ["Richard H. Whitehead", "1"], ["Walter B. Ballou", "1"]], "ipc": [[null, "0"]], "ipc1": [[null, "0"]], "ipc2": [[null, "0"]], "ipc3": [[null, "0"]], "ipc4": [[null, "0"]], "ipc5": [[null, "0"]], "loc": [[null, "0"]]}
+{
+	"category": "1825",
+	"countryCode": [["\u7f8e\u56fd", "us", "6"]],
+	"legalStatus": [["\u672a\u77e5", "6"]],
+	"applicationYear": [["1825", "6"]],
+	"documentYear": [
+		["1924", "3"],
+		["1923", "2"],
+		["1917", "1"]
+	],
+	"applicant": [
+		["Kelly", "1"],
+		["R", "1"],
+		["The Edward N", "1"],
+		["The Fisk Rubber company", "1"]
+	],
+	"applicantCountryCode": [[null, "0"]],
+	"inventor": [
+		["Armond D. Mathys", "1"],
+		["Frank S. Crowell", "1"],
+		["Hugo Battm", "1"],
+		["Reginald H. Waters", "1"],
+		["Richard H. Whitehead", "1"],
+		["Walter B. Ballou", "1"]
+	],
+	"ipc": [[null, "0"]],
+	"ipc1": [[null, "0"]],
+	"ipc2": [[null, "0"]],
+	"ipc3": [[null, "0"]],
+	"ipc4": [[null, "0"]],
+	"ipc5": [[null, "0"]],
+	"loc": [[null, "0"]]
+}
