@@ -1,23 +1,30 @@
 from collections import Counter
-import os, csv, time
+import os, csv, time, pickle
 import functools
 import operator
+
+from numpy.core.numeric import False_
+from numpy.lib.npyio import save
 import utility
 import math, random
 import pandas as pd
 import numpy as np
-import scipy
+import scipy, scipy.stats
 from scipy.stats import norm, kurtosis, kurtosistest, binned_statistic
 import statistics
 import matplotlib.pyplot as plt
 import statsmodels as sm
+import statsmodels.formula.api as smf
 import preprocess
+import rich
 
 
 data_folder = 'dev_data_selected'
+data_folder = 'dev_data_all'
 patent_data = 'csv_data_compiled/1990-2021'
 country_codes_path = 'references/country_codes_full.csv'    # grabbed from wikiepdia and UN statistics
 regression_dataset_folder = 'regression_datasets'
+optimized_dataset_folder = 'optimized_country_data'
 
 def flattenAndClean(df):
     flat = df.to_numpy().flatten()
@@ -113,7 +120,8 @@ def build_LARGE_multiIndex_dataset(start=1960, end=2020, track_extra_data=False)
     
     # 1. Build MultiIndexed DataFrame
     known_countries = sorted(patent_df.index)
-    years = [ str(i) for i in reversed(range(start, end+1)) ]
+    # note: year is indexed in INTEGER, not string
+    years = [ int(i) for i in reversed(range(start, end+1)) ]       
     index = pd.MultiIndex.from_product([ known_countries, years ])
     
     multi_df = pd.DataFrame(index=index)
@@ -131,19 +139,23 @@ def build_LARGE_multiIndex_dataset(start=1960, end=2020, track_extra_data=False)
     # '''
     # 3. Loop through all indicator dataset, flatten, and insert
     # array of tuples (filehandler, filename)
-    file_handles = []
+    files = []
     
     for f in os.listdir(data_folder):
         filename = os.fsdecode(f)
         if filename.endswith('.csv'):
             filepath = os.path.join(data_folder,filename)
             filestem = filename.rsplit('.', 1)[0].strip()
-            file_handles.append( (open(filepath), filestem) )
+            files.append( (filepath, filestem) )
     
     codes_not_found = set()
-    for data_file in file_handles:
-        f_handler, f_name = data_file
-        indicator_df = pd.read_csv(f_handler, index_col='economy')  # 'economy' is the country code alpha-3
+    for i, data_file in enumerate(files):
+        f_path, f_name = data_file
+        print(f'Handling {i+1}/{len(files)}: {f_name}')
+        
+        with open(file=f_path, mode='rt') as f_handler:
+            indicator_df = pd.read_csv(f_handler, index_col='economy')  # 'economy' is the country code alpha-3
+            
         indicator_df.sort_index(0, inplace=True)
         indicator_df = indicator_df.loc[:, f'YR{end}':f'YR{start}']
 
@@ -161,13 +173,11 @@ def build_LARGE_multiIndex_dataset(start=1960, end=2020, track_extra_data=False)
     
     if track_extra_data:
         print(f'{codes_not_found=}')
-        
-    multi_df.to_csv(f'{regression_dataset_folder}/MULTI_DATA_{start}-{end}.csv')
     
-    for f in file_handles:
-        f[0].close()
+    outfile_name = f'MultiIndexed_({start}-{end})_(N={len(files)+1})'
+    multi_df.to_csv(f'{regression_dataset_folder}/{outfile_name}.csv')
     
-    print(f'DONE. Compiled MultiIndexed data ({start}-{end}).\n')
+    print(f'\nDONE. Compiled {outfile_name}.\n')
     return multi_df
     
     
@@ -231,7 +241,7 @@ def checkForNormality():
     print(f'{bins=}, {frequency=}')
     plt.hist(data, bins=num_bins)
     plt.show()
-
+    
 
 def playground():
     # check for skewness
@@ -256,61 +266,197 @@ def playground():
     # print(kurtosistest(data))
 
 
-def build_country_dataframe():
-    large_dataset_path = f'{regression_dataset_folder}/LARGE_DATA.csv'
-    if not os.path.exists(large_dataset_path):
-        build_LARGE_singleIndex_dataframe()
+# given a multiindexed dataframe, return a model
+def buildModel(multi_df, dependent_variable='GDP (current US$)', recursionDepthMultiplier=5):
+        import sys
+        sys.setrecursionlimit(sys.getrecursionlimit()*recursionDepthMultiplier)
+        
+        predictors = list(filter(lambda e: e != dependent_variable, 
+                                list(multi_df.columns)))
+        
+        # build separate dataframe with compatible naming for OLS fit
+        ols_df = pd.DataFrame()
+        ols_df.insert(0, 'dependent', multi_df[dependent_variable])
+        predictor_names = {}
+        for i, old_name in enumerate(predictors):
+            new_name = f'predictor_{i}'
+            predictor_names[new_name] = old_name        # so we can map them back
+            ols_df[new_name] = multi_df[old_name]
+        
+        formula = 'dependent ~ ' + ' + '.join(list(predictor_names.keys()))
+        model = sm.formula.api.ols(formula, ols_df).fit()           # requires separate import of sm.formula (prob just init file construction)
+        
+        
+        sys.setrecursionlimit(1000)     # resetting recursion limit
+        
+        return model
+
+
+def checkVIFs(df, sorted_=True):
+    """Takes pandas dataframe and returns pandas series with VIF for each column
+
+    Args:
+        df: input pandas dataframe
+        sorted_ (bool, optional): sorts by VIFs in ascending order. Defaults to True.
+
+    Returns:
+        VIFs: pandas Series
+    """
     
-    with open(file=large_dataset_path, mode='rt') as f:
-        large_df = pd.read_csv(f, index_col='country_code')
-        # print(large_df.columns.values)
-        print(large_df)
+    from statsmodels.stats.outliers_influence import variance_inflation_factor
+    
+    if 'const' not in df.columns.values:
+        df = df.assign(const=1)   # statsmodels VIF function expects a column of constants (not sure why, but okay)
+        
+    VIFs = pd.Series([ variance_inflation_factor(df.values, i)
+                      for i in range(df.shape[1])], name='VIF',
+                     index=pd.Index(df.columns,
+                                    name='X'))
+    if sorted_:
+        VIFs.sort_values(ascending=True, inplace=True)
+    return VIFs
+
+
+def findMostIndependent(df, savepath=None):
+    s = time.perf_counter()
+    for _ in range(df.shape[1]-1):      # since one cannot be evaluated anymore
+        rich.print(f'[i]Num Indicators:[/i] {df.shape[1]}\n')
+        VIFs = checkVIFs(df, sorted_=False)
+        
+        # check if VIFs returns any NaN, inf, or 0 (which we are considering absolutely impossible)
+        VIFs.drop('const', inplace=True)      # also drop the artifical 'const' column
+        NaNs = np.argwhere( np.isnan(VIFs.values) )
+        Infs = np.argwhere( np.isinf(VIFs.values) )
+        Zeros = np.argwhere( VIFs.values == 0 )
+        
+        if len(NaNs) > 0:
+            df = df.drop(VIFs.index[NaNs[0][0]], axis=1)
+        elif len(Infs) > 0:
+            df = df.drop(VIFs.index[Infs[0][0]], axis=1)
+        elif len(Zeros) > 0:
+            df = df.drop(VIFs.index[Zeros[0][0]], axis=1)
+        else:
+            break
+        
+    
+    rich.print(f'Time: {time.perf_counter()-s}')
+    
+    if savepath is not None:
+        with open(file=savepath, mode='wb') as f:
+            pickle.dump(df, f)
+    
+    return df
+    
+
+def analyzeDF(multi_df_path):
+    MUST_HAVE_INDICATOR = 'total number of patents'
+    start_year = 2000
+    end_year = 2020
+    country = 'GBR'
+    
+    
+    # 1. dataframe selection
+    
+    multi_df = pd.read_csv(multi_df_path)
+    multi_df.set_index(['country_code', 'year'], inplace=True)
+    
+    # multi_df.fillna(0, inplace=True)      # only useful for testing (cannot be justified statistically)
+    # multi_df.dropna(inplace=True)
+    
+    # 1.1 Choose country
+    multi_df = multi_df.loc[(country)]
+    
+    # 1.2 Choose year range
+    multi_df = multi_df.loc[ end_year: start_year, :]
+
+    # 1.3 Check if patents column has any NaN (and since we're definitely using patents, we must have complete data)
+    if not all(multi_df[MUST_HAVE_INDICATOR].values): 
+        print(f'Do not have complete patent data for {country} ({start_year}-{end_year})')
+    
+    
+    # 1.4 Drop any columns with missing data
+    multi_df.dropna(subset=[MUST_HAVE_INDICATOR], inplace=True)
+    multi_df.dropna(axis=1, inplace=True)
+    # print(multi_df.columns.values)
+    
+
+    # 1.5 choose indicators using those with lowest VIFs
+    optimized_data_path = f'{optimized_dataset_folder}/{country} ({start_year}-{end_year}).pickle'
+    # X = findMostIndependent(multi_df.drop(MUST_HAVE_INDICATOR, axis=1),
+    #                         savepath=optimized_data_path)      # so we can check VIF without taking into account the must-have
+
+    with open(file=optimized_data_path, mode='rb') as f:
+        X = pickle.load(f)
+    
+    # choose top 5 (or some other) and check their VIFs
+    best_indicators = list(checkVIFs(X).drop('const')[0:8].index)
+    X = multi_df[[MUST_HAVE_INDICATOR] + best_indicators]
+    print(checkVIFs(X))
+    X.to_csv('temporary.csv')
+    
+    return
+
+    # NOTE: Try all combinations of 5 or some indicators to see which one gets best VIFs
+    
+    
+    
+    # temporary bestIndicators (which is just my own chosen list)
+    bestIndicators = ['Population ages 50-54, female (% of female population)', 'GDP per person employed (constant 2017 PPP $)','Travel services (% of commercial service exports)', MUST_HAVE_INDICATOR]
+    dependentVariable = 'Services, value added (annual % growth)'
+    
+    multi_df = multi_df.loc[ :, bestIndicators+[dependentVariable]]
+    with open('temporary.csv', mode='wt') as f:
+        multi_df.to_csv(f)
+    
+    # X is independent data set
+    X = multi_df[bestIndicators]
+    VIFs = checkVIFs(X, sorted_=False)
+    print(f'\n --- VIF of Indicators ---')
+    print(VIFs.reset_index())       # genius move, just reset index to force Series into Dataframe so we have both enumeration and name indexing
+
+    # alternatively, you can implement VIFs this way, but we're sticking with the library in this case
+    # vifs = pd.Series(np.linalg.inv(X.corr().to_numpy()).diagonal(), 
+    #              index=X.columns, 
+    #              name='VIF')
         
 
-def analyzeDF(multi_df):
-    # usa_df = multi_df.loc[('USA', '2020')]
-    # usa_df = multi_df.loc[('USA')]
-    # print(usa_df.head)
-    multi_df.dropna(inplace=True)
     print(f'Remaining data: {multi_df.shape}')
     
-    from statsmodels.formula.api import ols
-    dependent_variable = 'GDP (current US$)'
-    predictors = list(filter(lambda e: e != dependent_variable, 
-                             list(multi_df.columns)))
     
-    # build separate dataframe with compatible naming for OLS fit
-    ols_df = pd.DataFrame()
-    ols_df.insert(0, 'dependent', multi_df[dependent_variable])
-    predictor_names = []
-    for i, p in enumerate(predictors):
-        new_name = f'predictor_{i}'
-        predictor_names.append(new_name)
-        ols_df[new_name] = multi_df[p]
-    print(ols_df)
-    formula = 'dependent ~ ' + ' + '.join(predictor_names)
-    print(formula)
+    # 2. Model using OLS
+    model = buildModel(multi_df, dependent_variable=dependentVariable)
     
-    model = sm.formula.api.ols(formula, ols_df).fit()
+    
+    # 3. Display results
     print(model.get_robustcov_results().summary())
-    # print(model.summary())
+    print(model.params)
+    print(model.rsquared)
     
     
     # by_country_df = multi_df.groupby(by=["country_code"]).sum()
     # print(by_country_df)
     
-        
+    
+    
+    
+    return model
+
 
 def main():
     # checkForNormality()
     # playground()
     # multipleRegression()
     # build_LARGE_singleIndex_dataframe()
-    df = build_LARGE_multiIndex_dataset(start=2010, end=2020)
-    analyzeDF(df)
+    # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)
     
-    # build_country_dataframe()
-    # test()
+    analyzeDF(f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv')
+
+    # test dataset
+    # data = pd.read_csv('~/Downloads/BMI.csv')
+    # X = data[['Height', 'Weight']]
+    # print(np.corrcoef(X['Height'].values, X['Weight'].values)[0, 1])
+    # print(checkVIFs(X))
+    
     
 
 
