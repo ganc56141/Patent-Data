@@ -1,7 +1,8 @@
 from collections import Counter
-import os, csv, time, pickle
+import os, sys, csv, time, pickle
 import functools
 import operator
+from tokenize import group
 
 from numpy.core.numeric import False_
 from numpy.lib.npyio import save
@@ -15,6 +16,7 @@ import statistics
 import matplotlib.pyplot as plt
 import statsmodels as sm
 import statsmodels.formula.api as smf
+from statsmodels.multivariate.pca import PCA
 import preprocess
 import rich
 
@@ -292,6 +294,131 @@ def buildModel(multi_df, dependent_variable='GDP (current US$)', recursionDepthM
         return model
 
 
+def runPCA(multi_df):
+    pc = PCA(multi_df)      # could potentially use EM's algorithms to fill in missing values
+    print(pc)
+    
+
+def analyzeDF(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'], 
+              num_best_indicators = 6, num_sets = 6, MUST_HAVE_INDICATOR = 'total number of patents',
+              results_folder = 'results'):
+    
+    # 0. construct naming
+    country_names = ' + '.join(country)
+    
+    # 1. Extract country + year data from large dataset
+    rich.print("[green] >>> 1. Extracing data by Country and Year ... [/green]\n")
+    multi_df = country_year_extractor(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, country)
+
+    # 2. Filter indicators which are some linear shift or scaling of one another
+    rich.print("[green] >>> 2. Removing redundant indicators via continuous elimination ... [/green]\n")
+    clean_X = filter_redundancy(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, country_names)
+    
+    # 3. choose top 'num_best' (or some other) indicator groups with lowest VIFs
+    rich.print("[green] >>> 3. Choosing Best Sets of Indicators via stochastic process ... [/green]\n")
+    best_indicators = findBestSets(multi_df[list(clean_X.columns) + [MUST_HAVE_INDICATOR]], MUST_HAVE=[MUST_HAVE_INDICATOR], 
+                                   group_size=num_best_indicators, top_choices=num_sets, method='avg', random_sampling=1000)    
+    
+    # 4. Using those top groups of indicators, run regression for each group
+    
+    rich.print("[green] >>> 4. Running OLS on best indicator sets ... [/green]\n")
+    built_models = []
+    output_file = f'{results_folder}/{country_names} ({start_year}-{end_year}).txt'
+    with open(file=output_file, mode='wt') as results:
+        results.write(f">>> Country: {country_names}, Years: {start_year}-{end_year}\n\n")
+        
+        i = 1
+        for vif, indicators in best_indicators:
+            try:
+                model = performOLS(multi_df, X=indicators, Y='Services, value added (annual % growth)')
+            except Exception as e:
+                rich.print('[#e88718]OLS internal error. Dropping a set.[/#e88718]')
+                continue
+            
+            built_models.append(model)
+            full_vifs = checkVIFs(multi_df[indicators]).drop(labels=['const'])
+            
+            # record results
+            results.write(f'({i})\n')
+            results.write(f'-> Indicators: \n{indicators}\n\n')
+            results.write(f'-> Full VIF: \n{ full_vifs }\n\n')
+            results.write(f'-> Summary: \n{model.get_robustcov_results().summary()}\n\n\n\n')
+            
+            i += 1
+    
+    rich.print(f"[#1da5ee] >>> DONE. Results recorded ---> {output_file} [/#1da5ee]\n")
+    # 5. Display results
+    # print(model.get_robustcov_results().summary())
+    # print(model.params)
+    # print(f'r2 = {model.get_robustcov_results().rsquared_adj}')
+    
+    return
+    
+    
+    # by_country_df = multi_df.groupby(by=["country_code"]).sum()
+    # print(by_country_df)
+    
+
+
+def performOLS(multi_df, X, Y):
+    # X = ['Population ages 50-54, female (% of female population)', 'GDP per person employed (constant 2017 PPP $)','Travel services (% of commercial service exports)', MUST_HAVE_INDICATOR]
+    # Y = 'Services, value added (annual % growth)'
+    
+    model_df = multi_df.loc[ :, X + [Y]]
+    with open('temporary.csv', mode='wt') as f:
+        model_df.to_csv(f)
+
+
+    # alternatively, you can implement VIFs this way, but we're sticking with the library in this case
+    # vifs = pd.Series(np.linalg.inv(X.corr().to_numpy()).diagonal(), 
+    #              index=X.columns, 
+    #              name='VIF')
+
+
+    # 2. Model using OLS
+    model = buildModel(model_df, dependent_variable=Y)
+    return model
+
+
+
+def filter_redundancy(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, country_names):
+    optimized_data_path = f'{optimized_dataset_folder}/{country_names} ({start_year}-{end_year}).pickle'
+    
+    if not os.path.exists(optimized_data_path):
+        X = findMostIndependent(multi_df.drop(MUST_HAVE_INDICATOR, axis=1),
+                                savepath=optimized_data_path)      # so we can check VIF without taking into account the must-have
+    else:
+        with open(file=optimized_data_path, mode='rb') as f:
+            X = pickle.load(f)
+    return X
+
+def country_year_extractor(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, country):
+    # 1. dataframe selection
+    multi_df.set_index(['country_code', 'year'], inplace=True)
+    # multi_df.fillna(0, inplace=True)      # only useful for testing (cannot be justified statistically)
+    # multi_df.dropna(inplace=True)     # performed later
+    
+    
+    # 1.1 Choose country
+    multi_df = multi_df.loc[country]
+    multi_df = multi_df.groupby(by=["year"]).mean()
+    
+    # 1.2 Choose year range
+    multi_df = multi_df.loc[ start_year: end_year , :]
+
+    # 1.3 Check if patents column has any NaN (and since we're definitely using patents, we must have complete data)
+    if not all(multi_df[MUST_HAVE_INDICATOR].values): 
+        print(f'Do not have complete patent data for {country} ({start_year}-{end_year})')
+    
+    # 1.4 Drop any columns with missing data
+    multi_df.dropna(subset=[MUST_HAVE_INDICATOR], inplace=True)
+    multi_df.dropna(axis=1, inplace=True)
+
+    # print(multi_df.columns.values)
+    return multi_df
+
+
+
 def checkVIFs(df, sorted_=True):
     """Takes pandas dataframe and returns pandas series with VIF for each column
 
@@ -320,7 +447,8 @@ def checkVIFs(df, sorted_=True):
 def findMostIndependent(df, savepath=None):
     s = time.perf_counter()
     for _ in range(df.shape[1]-1):      # since one cannot be evaluated anymore
-        rich.print(f'[i]Num Indicators:[/i] {df.shape[1]}\n')
+        sys.stdout.write('\r')
+        rich.print(f'[i]Num Indicators:[/i] {df.shape[1]}', end='   ')      # trailing spaces are for removal formatting
         VIFs = checkVIFs(df, sorted_=False)
         
         # check if VIFs returns any NaN, inf, or 0 (which we are considering absolutely impossible)
@@ -339,107 +467,69 @@ def findMostIndependent(df, savepath=None):
             break
         
     
-    rich.print(f'Time: {time.perf_counter()-s}')
+    rich.print(f'\nTime: {time.perf_counter()-s}')
     
     if savepath is not None:
         with open(file=savepath, mode='wb') as f:
             pickle.dump(df, f)
     
     return df
-    
 
-def analyzeDF(multi_df_path):
-    MUST_HAVE_INDICATOR = 'total number of patents'
-    start_year = 2000
-    end_year = 2020
-    country = 'GBR'
-    
-    
-    # 1. dataframe selection
-    
-    multi_df = pd.read_csv(multi_df_path)
-    multi_df.set_index(['country_code', 'year'], inplace=True)
-    
-    # multi_df.fillna(0, inplace=True)      # only useful for testing (cannot be justified statistically)
-    # multi_df.dropna(inplace=True)
-    
-    # 1.1 Choose country
-    multi_df = multi_df.loc[(country)]
-    
-    # 1.2 Choose year range
-    multi_df = multi_df.loc[ end_year: start_year, :]
 
-    # 1.3 Check if patents column has any NaN (and since we're definitely using patents, we must have complete data)
-    if not all(multi_df[MUST_HAVE_INDICATOR].values): 
-        print(f'Do not have complete patent data for {country} ({start_year}-{end_year})')
-    
-    
-    # 1.4 Drop any columns with missing data
-    multi_df.dropna(subset=[MUST_HAVE_INDICATOR], inplace=True)
-    multi_df.dropna(axis=1, inplace=True)
-    # print(multi_df.columns.values)
-    
+def findBestSets(df, group_size, top_choices=5, method='avg', random_sampling=None, MUST_HAVE=[], sorted_=True):
+    """Finds best sets of indicators (i.e. those with lowest sum VIFs)
 
-    # 1.5 choose indicators using those with lowest VIFs
-    optimized_data_path = f'{optimized_dataset_folder}/{country} ({start_year}-{end_year}).pickle'
-    # X = findMostIndependent(multi_df.drop(MUST_HAVE_INDICATOR, axis=1),
-    #                         savepath=optimized_data_path)      # so we can check VIF without taking into account the must-have
+    Args:
+        df (pandas dataframe): self explanatory
+        group_size ([type]): the number of indicators you want in your predictor group
+        top_choices (int, optional): number of top scoring groups to be returned. Defaults to 5.
+        method (str, optional): scoring method for each group ('avg', 'max', 'min')    
+        random_sampling (int, optional): defines a subset of all possible sample to be randomly chosen to be evaluated
+            effectively decreasing number of possibilities to go through
+        MUST_HAVE (list): defines indicators that must be included 
+            (if set, the returned best set is guarenteed to return a set that includes this indicator)
+        sorted_ (bool, optional): output is sorted. Defaults to True.
 
-    with open(file=optimized_data_path, mode='rb') as f:
-        X = pickle.load(f)
+    Returns:
+        [type]: [description]
+    """
     
-    # choose top 5 (or some other) and check their VIFs
-    best_indicators = list(checkVIFs(X).drop('const')[0:8].index)
-    X = multi_df[[MUST_HAVE_INDICATOR] + best_indicators]
-    print(checkVIFs(X))
-    X.to_csv('temporary.csv')
+    from itertools import combinations
     
-    return
+    if df.shape[1] < group_size + len(MUST_HAVE):
+        return []
+    if df.shape[1] == group_size + len(MUST_HAVE):
+        return df.columns
+    
+    s = time.perf_counter()
+    
+    scores = []
+    samples = list(combinations(df.columns.drop(MUST_HAVE), group_size))
 
-    # NOTE: Try all combinations of 5 or some indicators to see which one gets best VIFs
+    if random_sampling != None and random_sampling < len(samples):
+        samples = random.sample(samples, random_sampling)
     
-    
-    
-    # temporary bestIndicators (which is just my own chosen list)
-    bestIndicators = ['Population ages 50-54, female (% of female population)', 'GDP per person employed (constant 2017 PPP $)','Travel services (% of commercial service exports)', MUST_HAVE_INDICATOR]
-    dependentVariable = 'Services, value added (annual % growth)'
-    
-    multi_df = multi_df.loc[ :, bestIndicators+[dependentVariable]]
-    with open('temporary.csv', mode='wt') as f:
-        multi_df.to_csv(f)
-    
-    # X is independent data set
-    X = multi_df[bestIndicators]
-    VIFs = checkVIFs(X, sorted_=False)
-    print(f'\n --- VIF of Indicators ---')
-    print(VIFs.reset_index())       # genius move, just reset index to force Series into Dataframe so we have both enumeration and name indexing
-
-    # alternatively, you can implement VIFs this way, but we're sticking with the library in this case
-    # vifs = pd.Series(np.linalg.inv(X.corr().to_numpy()).diagonal(), 
-    #              index=X.columns, 
-    #              name='VIF')
+    for i, group in enumerate(samples):
+        sys.stdout.write('\r')
+        rich.print(f'running {i+1}/{len(samples)}', end=' ')
         
-
-    print(f'Remaining data: {multi_df.shape}')
+        group = list(group) + MUST_HAVE
+        vifs = checkVIFs(df[group])
+        
+        if method == 'avg':
+            score = sum(vifs.drop('const'))/len(group)     # simple scoring with avg
+        elif method == 'max':
+            score = max(vifs.drop('const'))      # simple scoring with max
+        elif method == 'min':
+            score = min(vifs.drop('const'))      # simple scoring with min
+        
+        scores.append( (score, group) )
     
+    print(f"\nDone: {time.perf_counter()-s:2f}s\n")
+    scores.sort(key=lambda e: e[0])
+    return scores[:top_choices]
+        
     
-    # 2. Model using OLS
-    model = buildModel(multi_df, dependent_variable=dependentVariable)
-    
-    
-    # 3. Display results
-    print(model.get_robustcov_results().summary())
-    print(model.params)
-    print(model.rsquared)
-    
-    
-    # by_country_df = multi_df.groupby(by=["country_code"]).sum()
-    # print(by_country_df)
-    
-    
-    
-    
-    return model
 
 
 def main():
@@ -449,7 +539,12 @@ def main():
     # build_LARGE_singleIndex_dataframe()
     # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)
     
-    analyzeDF(f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv')
+    multi_df_path = f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv'
+    multi_df = pd.read_csv(multi_df_path)
+    
+    multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
+
+    analyzeDF(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU'], num_sets=5)
 
     # test dataset
     # data = pd.read_csv('~/Downloads/BMI.csv')

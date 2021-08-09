@@ -1,0 +1,80 @@
+>>> Country: GBR, Years: 2000-2020
+
+Indicators: ['Net financial account (BoP, current US$)', 'Refugee population by country or territory of origin', 'Net errors and omissions (BoP, current US$)', 'Population ages 55-59, female (% of female population)', 'Final consumption expenditure (% of GDP)', 'Gross capital formation (annual % growth)', 'total number of patents']
+ - Avg VIF 2.098326
+True VIF = X
+Gross capital formation (annual % growth)                 1.460444
+Net errors and omissions (BoP, current US$)               1.485939
+Net financial account (BoP, current US$)                  1.827351
+Final consumption expenditure (% of GDP)                  2.050900
+Refugee population by country or territory of origin      2.229587
+Population ages 55-59, female (% of female population)    2.261274
+total number of patents                                   3.372787
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.6642440181270516
+
+Indicators: ['Arms imports (SIPRI trend indicator values)', 'Net errors and omissions (BoP, current US$)', 'Population ages 55-59, female (% of female population)', 'Gross capital formation (annual % growth)', 'Secondary income receipts (BoP, current US$)', 'Agricultural raw materials exports (% of merchandise exports)', 'total number of patents']
+ - Avg VIF 2.192736
+True VIF = X
+Gross capital formation (annual % growth)                        1.428901
+Net errors and omissions (BoP, current US$)                      1.597439
+Arms imports (SIPRI trend indicator values)                      1.882828
+Agricultural raw materials exports (% of merchandise exports)    2.303840
+total number of patents                                          2.412045
+Population ages 55-59, female (% of female population)           2.791539
+Secondary income receipts (BoP, current US$)                     2.932563
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.6768122492898172
+
+Indicators: ['Arms imports (SIPRI trend indicator values)', 'Net errors and omissions (BoP, current US$)', 'Employment to population ratio, 15+, total (%) (modeled ILO estimate)', 'Insurance and financial services (% of service imports, BoP)', 'Gross capital formation (annual % growth)', 'Population ages 00-04, male (% of male population)', 'total number of patents']
+ - Avg VIF 2.295070
+True VIF = X
+Arms imports (SIPRI trend indicator values)                              1.423758
+Gross capital formation (annual % growth)                                1.459724
+Net errors and omissions (BoP, current US$)                              1.967963
+Insurance and financial services (% of service imports, BoP)             1.975666
+total number of patents                                                  2.972487
+Employment to population ratio, 15+, total (%) (modeled ILO estimate)    3.087980
+Population ages 00-04, male (% of male population)                       3.177910
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.7830084818888831
+
+Indicators: ['Taxes less subsidies on products (constant LCU)', 'Population ages 10-14, female (% of female population)', 'Final consumption expenditure (% of GDP)', 'Agriculture, forestry, and fishing, value added (constant 2010 US$)', 'Gross capital formation (annual % growth)', 'Secondary income receipts (BoP, current US$)', 'total number of patents']
+ - Avg VIF 2.538822
+True VIF = X
+Gross capital formation (annual % growth)                              1.782871
+Final consumption expenditure (% of GDP)                               2.109268
+Agriculture, forestry, and fishing, value added (constant 2010 US$)    2.142671
+Secondary income receipts (BoP, current US$)                           2.366344
+total number of patents                                                2.917287
+Population ages 10-14, female (% of female population)                 2.945926
+Taxes less subsidies on products (constant LCU)                        3.507386
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.7603284495322261
+
+Indicators: ['Population ages 55-59, female (% of female population)', 'Communications, computer, etc. (% of service imports, BoP)', 'Final consumption expenditure (% of GDP)', 'Agriculture, forestry, and fishing, value added (constant 2010 US$)', 'Insurance and financial services (% of commercial service exports)', 'Gross capital formation (annual % growth)', 'total number of patents']
+ - Avg VIF 2.555849
+True VIF = X
+Gross capital formation (annual % growth)                              1.433825
+Agriculture, forestry, and fishing, value added (constant 2010 US$)    2.134106
+Final consumption expenditure (% of GDP)                               2.382337
+Population ages 55-59, female (% of female population)                 2.603362
+total number of patents                                                2.633416
+Insurance and financial services (% of commercial service exports)     3.183900
+Communications, computer, etc. (% of service imports, BoP)             3.519999
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.7094758833362149
+
+Indicators: ['GDP per person employed (constant 2017 PPP $)', 'Net errors and omissions (BoP, current US$)', 'Insurance and financial services (% of service imports, BoP)', 'Agriculture, forestry, and fishing, value added (constant 2010 US$)', 'Gross capital formation (annual % growth)', 'Secondary income receipts (BoP, current US$)', 'total number of patents']
+ - Avg VIF 2.688297
+True VIF = X
+Gross capital formation (annual % growth)                              1.691894
+Net errors and omissions (BoP, current US$)                            1.758911
+Agriculture, forestry, and fishing, value added (constant 2010 US$)    1.868332
+total number of patents                                                2.520795
+Insurance and financial services (% of service imports, BoP)           2.696080
+GDP per person employed (constant 2017 PPP $)                          3.598808
+Secondary income receipts (BoP, current US$)                           4.683259
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.8531455959523634
+
