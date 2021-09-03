@@ -4,7 +4,7 @@ from tokenize import group
 
 from numpy.core.numeric import False_
 from numpy.lib.npyio import save
-from utility import interface_decorator
+from utility import HiddenPrints, interface_decorator
 import math, random
 import pandas as pd
 import numpy as np
@@ -19,14 +19,24 @@ from sklearn.decomposition import PCA
 from sklearn import preprocessing
 import preprocess
 import rich
+from tqdm import tqdm
 
 
+# input paths
 data_folder = 'dev_data_selected'
 data_folder = 'dev_data_all'
 patent_data = 'csv_data_compiled/1990-2021'
 country_codes_path = 'references/country_codes_full.csv'    # grabbed from wikiepdia and UN statistics
 regression_dataset_folder = 'regression_datasets'
 optimized_dataset_folder = 'optimized_country_data'
+
+# output paths
+dir_path = os.path.dirname(os.path.realpath(__file__))
+quick_visualization_results_folder = f'{dir_path}/quick_visual_results'
+simple_plot_results_folder = f'{dir_path}/simple_plot_results'
+OLS_results_folder = f'{dir_path}/OLS_results'
+PCA_results_folder = f'{dir_path}/PCA_results'
+clean_output = True
 
 
 
@@ -38,35 +48,35 @@ def main():
             Try it out!
     """
     
-    # -- Step 1: Build the LARGE singleIndex dataframe from raw JSON Data --
-    # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)     # if a different data range is needed
+    ''' -- Step 1: Build the LARGE singleIndex dataframe from raw JSON Data -- '''
+    # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)     # only run if new raw data is obtained
     
     
-    # -- Step 2: read in the the build dataframe --
+    ''' -- Step 2: read in the multiindexed dataframe -- '''
     multi_df_path = f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv'
     multi_df = pd.read_csv(multi_df_path, index_col=['country_code', 'year'])
-    # multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
 
 
-    # -- Step 2.5 quick visualizations to check data spread (if necessary) --
+    ''' -- Step 2.5 quick visualizations to check data spread (if necessary) -- '''
     checkForNormality(num_bins=50)
     # quickPlot(multi_df, country='ARG', indicator='total number of patents')        # quick plot of one indicator in one country by year
     
     
-    # -- Step 3. Generate simple variable regressions for ALL countries by default --
+    ''' -- Step 3. Generate simple variable regressions for ALL countries by default -- '''
     simple_plot(multi_df)   # outputs graphs to simple_plots subdirectory
     
     
-    # -- Step 4. Analyze using OLS --
-    # choose your countries by their unique alpha-3 code
+    ''' -- Step 4. Analyze using OLS -- '''
+    # choose your countries by their unique ISO alpha-3 code
     df = multi_df.xs(key=2020, axis=0, level='year', drop_level=False).sort_values(by=['GDP (current US$)'], ascending=False)   # sort by GDP
     countries = df.index.get_level_values('country_code').to_numpy()[:10]       # get top 10 countries
     
-    runOLS(multi_df, country=countries, num_sets=5) 
+    runOLS(multi_df, country=countries, start_year=1990, end_year=2020, num_sets=5) 
     
     
-    # -- Step 5. Analyze using PCA --
+    ''' -- Step 5. Analyze using PCA -- '''
     run_PCA_scikit(multi_df, groupby='country_code')     # currently only supports grouping data by country before running PCA
+
 
 
 
@@ -270,20 +280,29 @@ def checkForNormality(num_bins=50):
     data = flattenAndClean(df)
     data, alpha = scipy.stats.boxcox(data)
     
-    print( scipy.stats.kurtosistest(data, axis=0, nan_policy='propagate', alternative='two-sided') )
-    print( scipy.stats.bartlett(data, years))       # test for equal variance between random variables
-    # print( scipy.stats.skewtest(data, axis=0, nan_policy='propagate', alternative='two-sided') )
-    print( f"Skewness: {scipy.stats.skew(data, axis=0, nan_policy='propagate')}")
-    print( f'{statistics.stdev(data)=}\n' )
+    # print( scipy.stats.skewtest(data, axis=0, nan_policy='propagate', alternative='two-sided') )      # alternative?
+    skewness, kurtosis, bartlett, stdev = (f"Skewness: {scipy.stats.skew(data, axis=0, nan_policy='propagate')}", 
+                                            scipy.stats.kurtosistest(data, axis=0, nan_policy='propagate', alternative='two-sided'), 
+                                            scipy.stats.bartlett(data, years),   # test for equal variance between random variables
+                                            f'{statistics.stdev(data)=}')
+    
+    metrics = f"{skewness}\n{kurtosis}\n{bartlett}\n{stdev}\n"
+    print(metrics)
+    
     
     # plot distribution
     # binned = scipy.stats.binned_statistic(df_clean, df_clean, statistic='mean', bins=10, range=None)
     # print(type(binned[0]))
     
     frequency, bins = np.histogram(data, bins=num_bins, range=None)
-    print(f'{bins=}, {frequency=}')
+    print(f'{bins=},\n{frequency=}')
     plt.hist(data, bins=num_bins)
-    plt.show()
+    plt.savefig(f'{quick_visualization_results_folder}/Bar Plot.png', format="PNG")
+    
+    with open(f'{quick_visualization_results_folder}/metrics.txt', 'w') as f:
+        f.write(metrics)
+        f.write(f'\n{bins=},\n{frequency=}')
+        
 
 @interface_decorator
 def quickPlot(multi_df, country, indicator='total number of patents'):
@@ -347,8 +366,7 @@ def buildModel(multi_df, dependent_variable='GDP (current US$)', recursionDepthM
 
 @interface_decorator
 def runOLS(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'], 
-              num_best_indicators = 6, num_sets = 6, MUST_HAVE_INDICATOR = 'total number of patents',
-              results_folder = 'results'):
+              num_best_indicators = 6, num_sets = 6, MUST_HAVE_INDICATOR = 'total number of patents'):
     
     # 0. construct naming
     country_names = ' + '.join(country)
@@ -370,7 +388,7 @@ def runOLS(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'],
     
     rich.print("[green] >>> 4. Running OLS on best indicator sets ... [/green]\n")
     built_models = []
-    output_file = f'{results_folder}/{country_names} ({start_year}-{end_year}).txt'
+    output_file = f'{OLS_results_folder}/{country_names} ({start_year}-{end_year}).txt'
     with open(file=output_file, mode='wt') as results:
         results.write(f">>> Country: {country_names}, Years: {start_year}-{end_year}\n\n")
         
@@ -479,11 +497,12 @@ def checkVIFs(df, sorted_=True):
     
     if 'const' not in df.columns.values:
         df = df.assign(const=1)   # statsmodels VIF function expects a column of constants (not sure why, but okay)
-        
-    VIFs = pd.Series([ variance_inflation_factor(df.values, i)
-                      for i in range(df.shape[1])], name='VIF',
-                     index=pd.Index(df.columns,
-                                    name='X'))
+    
+    with HiddenPrints():        # suppresses 'RuntimeWarning: divide by zero encountered in double_scalars', which is known
+        VIFs = pd.Series([ variance_inflation_factor(df.values, i)
+                        for i in range(df.shape[1])], name='VIF',
+                        index=pd.Index(df.columns,
+                                        name='X'))
     if sorted_:
         VIFs.sort_values(ascending=True, inplace=True)
     return VIFs
@@ -523,7 +542,7 @@ def findMostIndependent(df, savepath=None):
             break
         
     
-    rich.print(f'\nTime: {time.perf_counter()-s}')
+    rich.print(f'\nTime: {time.perf_counter()-s}\n')
     
     if savepath is not None:
         with open(file=savepath, mode='wb') as f:
@@ -587,7 +606,7 @@ def findBestSets(df, group_size, top_choices=5, method='avg', random_sampling=No
         
     
 @interface_decorator
-def simple_plot(multi_df, country_codes=None):
+def simple_plot(multi_df, country_codes=None, forceUpdate=False):
     multi_df = multi_df.reset_index(level=[0, 1])       # flatten row multiindexing
 
     if country_codes == None:
@@ -599,7 +618,15 @@ def simple_plot(multi_df, country_codes=None):
     
     
     for i, country_code in enumerate(country_codes):
-        print(f'{i+1}/{len(country_codes)}: fitting {country_code} data') 
+        rich.print(f'{i+1}/{len(country_codes)}: fitting {country_code} data', end='\r') 
+        
+        name = alpha3_to_name[country_code]
+        figpath = f'{simple_plot_results_folder}/{country_code}-{name}.png'
+        
+        # shortcut, assuming no forceUpdate
+        if not forceUpdate and os.path.exists(figpath):
+            time.sleep(0.02)
+            continue
         
         df = multi_df[multi_df['country_code'] == country_code].loc[:, ['year', 'GDP (constant LCU)', 'total number of patents']]
         # df['ratio'] = df['GDP (constant LCU)'] / df['total number of patents']
@@ -628,16 +655,15 @@ def simple_plot(multi_df, country_codes=None):
         # m, b = np.polyfit(x_vals, y_vals, 1)
         plt.plot(x_vals, m*x_vals + b, linewidth=1.2, label=f'{m:.2f}*{x} + {b:.2f}')
         
-        name = alpha3_to_name[country_code]
+        
         plt.title(f'{name}: Total patents to GDP (n={len(df[x])}) (r2 = {r_value**2:.5f}) (p = {p_value:.8f})')
         plt.grid(alpha=.4,linestyle='--')
         plt.yscale('linear')
         plt.legend()
-        plt.savefig(f'simple_plots/{country_code}-{name}.png')
+        plt.savefig(figpath)
         plt.close()
     
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    print(f'\nView Simple Plots in: \n{dir_path}/simple_plots\n')
+    print(f'\n\nView Simple Plots in: \n{simple_plot_results_folder}\n')
     
 
 def clean_data_for_PCA(multi_df, groupby):
@@ -679,7 +705,6 @@ def clean_data_for_PCA(multi_df, groupby):
 def run_PCA_scikit(multi_df, groupby='country_code'):
     # first, data cleaning
     df = clean_data_for_PCA(multi_df, groupby=groupby)
-    print(df)
 
     scaled_data = preprocessing.scale(df)   # now mean = 0, and sd = 1 (standard normal distribution)
 
@@ -705,14 +730,13 @@ def run_PCA_scikit(multi_df, groupby='country_code'):
     ax.set_ylabel('Percentage of Explained Variance')
     ax.set_ylabel('Principal Component')
     ax.set_title('Scree Plot')
-    plt.show()
+    plt.savefig(f'{PCA_results_folder}/Scree Plot.png', format="PNG")
     plt.close()
-
 
 
     # # Generate PCA Plot with first 2 principle components
     pca_df = pd.DataFrame(pca_data, index=[*df.index.values], columns=labels)
-    print(pca_df)
+    
     plt.figure(figsize=[12, 9])
     plt.scatter(pca_df.PC1, pca_df.PC2, c=df['GDP (constant 2010 US$)'], cmap='Spectral')
     plt.title('PCA Graph')
@@ -722,9 +746,8 @@ def run_PCA_scikit(multi_df, groupby='country_code'):
     for sample in pca_df.index:
         plt.annotate(sample, (pca_df.PC1.loc[sample], pca_df.PC2.loc[sample]))
         
-        
-
-    plt.show()
+    plt.savefig(f'{PCA_results_folder}/PCA plot.png', format="PNG")
+    plt.close()
 
     # # Check loading scores (on PC1) to see which indicators have most influence on variance
     loading_scores = pd.Series(pca.components_[0], index=df.columns)
@@ -734,7 +757,11 @@ def run_PCA_scikit(multi_df, groupby='country_code'):
     df = pd.DataFrame( [top_indicators, loading_scores[top_indicators].values], 
                       index=['Indicator', 'Score'], 
                       columns=[list(range(1, len(top_indicators)+1))] )     # note this dataframe has row and columns flipped
+    
+    with open(f'{PCA_results_folder}/loading scores.txt', 'w') as f:
+        f.write(df.T.to_string())
     print(df.T)
+    print(f'\n\nView PCA results in: \n{PCA_results_folder}\n')
     print()
 
 

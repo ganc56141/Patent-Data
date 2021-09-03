@@ -1,0 +1,210 @@
+>>> Country: FRA, Years: 1990-2020
+
+(1)
+-> Indicators: 
+['Arms imports (SIPRI trend indicator values)', 'Labor force participation rate for ages 15-24, female (%) (national estimate)', 'Manufacturing, value added (% of GDP)', 'Communications, computer, etc. (% of service imports, BoP)', 'Gross capital formation (annual % growth)', 'Secondary income receipts (BoP, current US$)', 'total number of patents']
+
+-> Full VIF: 
+X
+Labor force participation rate for ages 15-24, female (%) (national estimate)    1.232423
+Gross capital formation (annual % growth)                                        1.356519
+Arms imports (SIPRI trend indicator values)                                      1.462329
+Secondary income receipts (BoP, current US$)                                     1.899564
+Manufacturing, value added (% of GDP)                                            2.091779
+Communications, computer, etc. (% of service imports, BoP)                       2.271461
+total number of patents                                                          3.004748
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.944
+Model:                            OLS   Adj. R-squared:                  0.926
+Method:                 Least Squares   F-statistic:                     101.0
+Date:                Fri, 03 Sep 2021   Prob (F-statistic):           7.24e-15
+Time:                        23:29:45   Log-Likelihood:                -19.521
+No. Observations:                  31   AIC:                             55.04
+Df Residuals:                      23   BIC:                             66.51
+Df Model:                           7                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept      -6.6556      1.394     -4.774      0.000      -9.540      -3.771
+predictor_0 -2.995e-11    3.5e-10     -0.086      0.933   -7.54e-10    6.94e-10
+predictor_1     0.0128      0.026      0.488      0.630      -0.041       0.067
+predictor_2     0.0387      0.071      0.545      0.591      -0.108       0.186
+predictor_3    -0.0479      0.020     -2.453      0.022      -0.088      -0.008
+predictor_4     0.1695      0.015     11.413      0.000       0.139       0.200
+predictor_5  2.421e-11   1.73e-11      1.400      0.175   -1.16e-11       6e-11
+predictor_6     0.0003   3.88e-05      8.700      0.000       0.000       0.000
+==============================================================================
+Omnibus:                        0.133   Durbin-Watson:                   2.359
+Prob(Omnibus):                  0.936   Jarque-Bera (JB):                0.139
+Skew:                           0.121   Prob(JB):                        0.933
+Kurtosis:                       2.778   Cond. No.                     4.52e+11
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 4.52e+11. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+
+(2)
+-> Indicators: 
+['Gross national expenditure (% of GDP)', 'Gross fixed capital formation (annual % growth)', 'Arms imports (SIPRI trend indicator values)', 'Net errors and omissions (BoP, current US$)', 'Gross national expenditure (constant LCU)', 'Insurance and financial services (% of commercial service exports)', 'total number of patents']
+
+-> Full VIF: 
+X
+Net errors and omissions (BoP, current US$)                           1.170352
+Arms imports (SIPRI trend indicator values)                           1.485128
+Gross fixed capital formation (annual % growth)                       1.561786
+total number of patents                                               1.587771
+Insurance and financial services (% of commercial service exports)    2.088340
+Gross national expenditure (% of GDP)                                 3.715919
+Gross national expenditure (constant LCU)                             3.882567
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.949
+Model:                            OLS   Adj. R-squared:                  0.933
+Method:                 Least Squares   F-statistic:                     115.8
+Date:                Fri, 03 Sep 2021   Prob (F-statistic):           6.91e-15
+Time:                        23:29:45   Log-Likelihood:                -17.984
+No. Observations:                  31   AIC:                             51.97
+Df Residuals:                      23   BIC:                             63.44
+Df Model:                           7                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept       7.9487     12.030      0.661      0.515     -16.937      32.834
+predictor_0    -0.1185      0.129     -0.916      0.369      -0.386       0.149
+predictor_1     0.3079      0.030     10.354      0.000       0.246       0.369
+predictor_2  3.356e-10   4.15e-10      0.808      0.427   -5.24e-10    1.19e-09
+predictor_3 -2.661e-12   6.99e-12     -0.380      0.707   -1.71e-11    1.18e-11
+predictor_4 -1.639e-13   6.69e-13     -0.245      0.809   -1.55e-12    1.22e-12
+predictor_5     0.0547      0.023      2.358      0.027       0.007       0.103
+predictor_6     0.0002   2.52e-05      7.618      0.000       0.000       0.000
+==============================================================================
+Omnibus:                        0.512   Durbin-Watson:                   1.918
+Prob(Omnibus):                  0.774   Jarque-Bera (JB):                0.418
+Skew:                          -0.263   Prob(JB):                        0.811
+Kurtosis:                       2.783   Cond. No.                     2.36e+14
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 2.36e+14. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+
+(3)
+-> Indicators: 
+['DEC alternative conversion factor (LCU per US$)', 'Imports of goods, services and primary income (BoP, current US$)', 'Insurance and financial services (% of service imports, BoP)', 'Final consumption expenditure (% of GDP)', 'Discrepancy in expenditure estimate of GDP (current LCU)', 'Agriculture, forestry, and fishing, value added (constant 2010 US$)', 'total number of patents']
+
+-> Full VIF: 
+X
+total number of patents                                                1.268933
+Discrepancy in expenditure estimate of GDP (current LCU)               1.375772
+Insurance and financial services (% of service imports, BoP)           1.564244
+Final consumption expenditure (% of GDP)                               1.569239
+DEC alternative conversion factor (LCU per US$)                        2.224174
+Agriculture, forestry, and fishing, value added (constant 2010 US$)    3.933933
+Imports of goods, services and primary income (BoP, current US$)       4.314050
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.806
+Model:                            OLS   Adj. R-squared:                  0.747
+Method:                 Least Squares   F-statistic:                     25.02
+Date:                Fri, 03 Sep 2021   Prob (F-statistic):           1.36e-08
+Time:                        23:29:45   Log-Likelihood:                -38.696
+No. Observations:                  31   AIC:                             93.39
+Df Residuals:                      23   BIC:                             104.9
+Df Model:                           7                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept      50.5854     17.756      2.849      0.009      13.854      87.317
+predictor_0    -1.2445      2.185     -0.569      0.575      -5.765       3.276
+predictor_1 -3.928e-15   1.25e-12     -0.003      0.998   -2.58e-12    2.58e-12
+predictor_2     0.0207      0.023      0.909      0.373      -0.026       0.068
+predictor_3    -0.7624      0.226     -3.367      0.003      -1.231      -0.294
+predictor_4  3.809e-07   3.36e-07      1.133      0.269   -3.14e-07    1.08e-06
+predictor_5  6.859e-11   7.85e-11      0.873      0.391   -9.39e-11    2.31e-10
+predictor_6     0.0003   3.63e-05      8.894      0.000       0.000       0.000
+==============================================================================
+Omnibus:                        0.722   Durbin-Watson:                   1.534
+Prob(Omnibus):                  0.697   Jarque-Bera (JB):                0.403
+Skew:                           0.278   Prob(JB):                        0.818
+Kurtosis:                       2.949   Cond. No.                     8.44e+13
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 8.44e+13. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+
+(4)
+-> Indicators: 
+['Population ages 65-69, male (% of male population)', 'DEC alternative conversion factor (LCU per US$)', 'Population ages 15-64, total', 'Final consumption expenditure (% of GDP)', 'Discrepancy in expenditure estimate of GDP (current LCU)', 'Population ages 00-04, male (% of male population)', 'total number of patents']
+
+-> Full VIF: 
+X
+Discrepancy in expenditure estimate of GDP (current LCU)    1.341211
+Final consumption expenditure (% of GDP)                    1.639066
+DEC alternative conversion factor (LCU per US$)             1.922177
+total number of patents                                     2.018817
+Population ages 15-64, total                                2.336622
+Population ages 65-69, male (% of male population)          2.668461
+Population ages 00-04, male (% of male population)          5.024965
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.861
+Model:                            OLS   Adj. R-squared:                  0.819
+Method:                 Least Squares   F-statistic:                     54.04
+Date:                Fri, 03 Sep 2021   Prob (F-statistic):           8.79e-13
+Time:                        23:29:45   Log-Likelihood:                -33.494
+No. Observations:                  31   AIC:                             82.99
+Df Residuals:                      23   BIC:                             94.46
+Df Model:                           7                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept      97.1600     23.595      4.118      0.000      48.350     145.970
+predictor_0    -0.0880      0.373     -0.236      0.816      -0.860       0.684
+predictor_1    -4.2106      1.578     -2.668      0.014      -7.476      -0.945
+predictor_2 -3.418e-07    9.9e-08     -3.452      0.002   -5.47e-07   -1.37e-07
+predictor_3    -0.8267      0.252     -3.285      0.003      -1.347      -0.306
+predictor_4  6.472e-08   2.44e-07      0.265      0.793   -4.41e-07     5.7e-07
+predictor_5    -3.6682      1.204     -3.048      0.006      -6.158      -1.178
+predictor_6     0.0004   2.78e-05     14.523      0.000       0.000       0.000
+==============================================================================
+Omnibus:                        7.136   Durbin-Watson:                   1.899
+Prob(Omnibus):                  0.028   Jarque-Bera (JB):                5.423
+Skew:                           0.877   Prob(JB):                       0.0665
+Kurtosis:                       4.059   Cond. No.                     6.01e+09
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 6.01e+09. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+

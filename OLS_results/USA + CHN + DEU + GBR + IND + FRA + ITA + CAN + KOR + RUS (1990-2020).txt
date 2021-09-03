@@ -1,0 +1,262 @@
+>>> Country: USA + CHN + DEU + GBR + IND + FRA + ITA + CAN + KOR + RUS, Years: 1990-2020
+
+(1)
+-> Indicators: 
+['Secondary education, duration (years)', 'Net financial account (BoP, current US$)', 'General government final consumption expenditure (constant 2010 US$)', 'Net errors and omissions (BoP, current US$)', 'Net primary income (Net income from abroad) (constant LCU)', 'Discrepancy in expenditure estimate of GDP (current LCU)', 'total number of patents']
+
+-> Full VIF: 
+X
+Secondary education, duration (years)                                   0.000001
+Net financial account (BoP, current US$)                                1.869307
+Discrepancy in expenditure estimate of GDP (current LCU)                2.871265
+Net errors and omissions (BoP, current US$)                             3.178718
+total number of patents                                                 6.806864
+General government final consumption expenditure (constant 2010 US$)    6.953772
+Net primary income (Net income from abroad) (constant LCU)              9.723193
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.630
+Model:                            OLS   Adj. R-squared:                  0.537
+Method:                 Least Squares   F-statistic:                     6.078
+Date:                Sat, 04 Sep 2021   Prob (F-statistic):            0.00732
+Time:                        00:37:00   Log-Likelihood:                -48.064
+No. Observations:                  31   AIC:                             110.1
+Df Residuals:                      24   BIC:                             120.2
+Df Model:                           6                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept      -0.1806      0.087     -2.068      0.050      -0.361      -0.000
+predictor_0    -1.2462      0.603     -2.068      0.050      -2.490      -0.002
+predictor_1 -1.606e-11   2.49e-11     -0.646      0.524   -6.74e-11    3.52e-11
+predictor_2  2.864e-11   9.39e-12      3.050      0.006    9.26e-12     4.8e-11
+predictor_3  5.482e-11   3.52e-11      1.556      0.133   -1.79e-11    1.28e-10
+predictor_4 -2.829e-11   3.05e-11     -0.927      0.363   -9.13e-11    3.47e-11
+predictor_5  6.859e-12   3.05e-12      2.246      0.034    5.55e-13    1.32e-11
+predictor_6 -1.559e-05   4.61e-06     -3.378      0.002   -2.51e-05   -6.06e-06
+==============================================================================
+Omnibus:                       13.090   Durbin-Watson:                   1.648
+Prob(Omnibus):                  0.001   Jarque-Bera (JB):               13.596
+Skew:                          -1.210   Prob(JB):                      0.00112
+Kurtosis:                       5.161   Cond. No.                     7.62e+17
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The smallest eigenvalue is 1.76e-11. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.
+
+
+
+(2)
+-> Indicators: 
+['Secondary education, duration (years)', 'Primary income receipts (BoP, current US$)', 'Net financial account (BoP, current US$)', 'Net primary income (Net income from abroad) (constant LCU)', 'Interest payments (current LCU)', 'Discrepancy in expenditure estimate of GDP (current LCU)', 'total number of patents']
+
+-> Full VIF: 
+X
+Secondary education, duration (years)                         3.791131e-09
+Net financial account (BoP, current US$)                      1.101858e+00
+Discrepancy in expenditure estimate of GDP (current LCU)      2.600767e+00
+Primary income receipts (BoP, current US$)                    6.414290e+00
+Interest payments (current LCU)                               6.475501e+00
+Net primary income (Net income from abroad) (constant LCU)    8.046079e+00
+total number of patents                                       8.553026e+00
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.738
+Model:                            OLS   Adj. R-squared:                  0.673
+Method:                 Least Squares   F-statistic:                     29.03
+Date:                Sat, 04 Sep 2021   Prob (F-statistic):           3.92e-07
+Time:                        00:37:00   Log-Likelihood:                -42.689
+No. Observations:                  31   AIC:                             99.38
+Df Residuals:                      24   BIC:                             109.4
+Df Model:                           6                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept       0.0839      0.015      5.670      0.000       0.053       0.114
+predictor_0     0.5787      0.102      5.670      0.000       0.368       0.789
+predictor_1  8.046e-13   8.52e-12      0.094      0.926   -1.68e-11    1.84e-11
+predictor_2 -1.895e-11   1.25e-11     -1.516      0.143   -4.48e-11    6.85e-12
+predictor_3 -2.469e-11   2.79e-11     -0.886      0.385   -8.22e-11    3.28e-11
+predictor_4  3.399e-12   5.63e-13      6.037      0.000    2.24e-12    4.56e-12
+predictor_5  5.226e-12   2.15e-12      2.431      0.023     7.9e-13    9.66e-12
+predictor_6 -2.348e-05   3.92e-06     -5.986      0.000   -3.16e-05   -1.54e-05
+==============================================================================
+Omnibus:                        0.912   Durbin-Watson:                   1.755
+Prob(Omnibus):                  0.634   Jarque-Bera (JB):                0.629
+Skew:                          -0.343   Prob(JB):                        0.730
+Kurtosis:                       2.876   Cond. No.                     1.16e+18
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The smallest eigenvalue is 5.92e-11. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.
+
+
+
+(3)
+-> Indicators: 
+['Secondary education, duration (years)', 'Arms imports (SIPRI trend indicator values)', 'Taxes on international trade (current LCU)', 'Refugee population by country or territory of origin', 'Net errors and omissions (BoP, current US$)', 'Secondary income receipts (BoP, current US$)', 'total number of patents']
+
+-> Full VIF: 
+X
+Secondary education, duration (years)                   6.666951e-11
+Refugee population by country or territory of origin    1.182224e+00
+Arms imports (SIPRI trend indicator values)             1.451674e+00
+Net errors and omissions (BoP, current US$)             1.740918e+00
+Taxes on international trade (current LCU)              2.867863e+00
+total number of patents                                 1.493379e+01
+Secondary income receipts (BoP, current US$)            1.832346e+01
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.700
+Model:                            OLS   Adj. R-squared:                  0.625
+Method:                 Least Squares   F-statistic:                     4.882
+Date:                Sat, 04 Sep 2021   Prob (F-statistic):            0.00865
+Time:                        00:37:00   Log-Likelihood:                -44.818
+No. Observations:                  31   AIC:                             103.6
+Df Residuals:                      24   BIC:                             113.7
+Df Model:                           6                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept       0.0879      0.043      2.040      0.052      -0.001       0.177
+predictor_0     0.6062      0.297      2.040      0.052      -0.007       1.219
+predictor_1  1.497e-09   2.74e-09      0.547      0.589   -4.15e-09    7.14e-09
+predictor_2  4.225e-12   7.74e-13      5.457      0.000    2.63e-12    5.82e-12
+predictor_3 -4.616e-05   2.32e-05     -1.994      0.058   -9.39e-05    1.63e-06
+predictor_4  4.824e-11   2.19e-11      2.207      0.037    3.13e-12    9.33e-11
+predictor_5 -2.455e-10   7.66e-11     -3.207      0.004   -4.03e-10   -8.75e-11
+predictor_6  8.828e-06   5.63e-06      1.568      0.130   -2.79e-06    2.05e-05
+==============================================================================
+Omnibus:                        3.451   Durbin-Watson:                   1.581
+Prob(Omnibus):                  0.178   Jarque-Bera (JB):                2.037
+Skew:                          -0.421   Prob(JB):                        0.361
+Kurtosis:                       3.932   Cond. No.                     4.49e+18
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The smallest eigenvalue is 1.79e-12. This might indicate that there are
+strong multicollinearity problems or that the design matrix is singular.
+
+
+
+(4)
+-> Indicators: 
+['Other expense (% of expense)', 'Refugee population by country or territory of origin', 'Imports of goods, services and primary income (BoP, current US$)', 'Net errors and omissions (BoP, current US$)', 'Gross value added at basic prices (GVA) (constant LCU)', 'Discrepancy in expenditure estimate of GDP (current LCU)', 'total number of patents']
+
+-> Full VIF: 
+X
+Refugee population by country or territory of origin                 1.523063
+Net errors and omissions (BoP, current US$)                          1.878670
+Discrepancy in expenditure estimate of GDP (current LCU)             3.257713
+Gross value added at basic prices (GVA) (constant LCU)               3.432109
+Other expense (% of expense)                                         3.463843
+Imports of goods, services and primary income (BoP, current US$)    11.944346
+total number of patents                                             17.701845
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.463
+Model:                            OLS   Adj. R-squared:                  0.329
+Method:                 Least Squares   F-statistic:                     29.79
+Date:                Sat, 04 Sep 2021   Prob (F-statistic):           2.93e-08
+Time:                        00:37:00   Log-Likelihood:                -53.822
+No. Observations:                  31   AIC:                             121.6
+Df Residuals:                      24   BIC:                             131.7
+Df Model:                           6                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept       0.0796      0.017      4.687      0.000       0.045       0.115
+predictor_0     0.7409      0.158      4.687      0.000       0.415       1.067
+predictor_1  7.202e-05   2.49e-05      2.892      0.008    2.06e-05       0.000
+predictor_2 -5.042e-13   1.66e-12     -0.304      0.764   -3.93e-12    2.92e-12
+predictor_3  1.169e-11   2.81e-11      0.416      0.681   -4.63e-11    6.97e-11
+predictor_4 -2.205e-14   2.37e-15     -9.306      0.000   -2.69e-14   -1.72e-14
+predictor_5  7.503e-13    2.5e-12      0.300      0.766   -4.41e-12    5.91e-12
+predictor_6    4.8e-06   5.63e-06      0.853      0.402   -6.81e-06    1.64e-05
+==============================================================================
+Omnibus:                        8.865   Durbin-Watson:                   1.636
+Prob(Omnibus):                  0.012   Jarque-Bera (JB):                8.779
+Skew:                          -0.770   Prob(JB):                       0.0124
+Kurtosis:                       5.104   Cond. No.                     1.43e+15
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 1.43e+15. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+
+(5)
+-> Indicators: 
+['Net primary income (Net income from abroad) (current LCU)', 'Other expense (% of expense)', 'Net financial account (BoP, current US$)', 'Net errors and omissions (BoP, current US$)', 'Population ages 15-64, total', 'Gross value added at basic prices (GVA) (constant LCU)', 'total number of patents']
+
+-> Full VIF: 
+X
+Net financial account (BoP, current US$)                      2.668213
+Other expense (% of expense)                                  3.150140
+Net primary income (Net income from abroad) (current LCU)     3.248850
+Net errors and omissions (BoP, current US$)                   3.636228
+total number of patents                                       4.539356
+Gross value added at basic prices (GVA) (constant LCU)        4.625167
+Population ages 15-64, total                                 23.563552
+Name: VIF, dtype: float64
+
+-> Summary: 
+                            OLS Regression Results                            
+==============================================================================
+Dep. Variable:              dependent   R-squared:                       0.769
+Model:                            OLS   Adj. R-squared:                  0.711
+Method:                 Least Squares   F-statistic:                     1.463
+Date:                Sat, 04 Sep 2021   Prob (F-statistic):              0.251
+Time:                        00:37:00   Log-Likelihood:                -40.761
+No. Observations:                  31   AIC:                             95.52
+Df Residuals:                      24   BIC:                             105.6
+Df Model:                           6                                         
+Covariance Type:                  HC1                                         
+===============================================================================
+                  coef    std err          t      P>|t|      [0.025      0.975]
+-------------------------------------------------------------------------------
+Intercept       0.0105      0.011      1.004      0.325      -0.011       0.032
+predictor_0 -3.819e-13   3.41e-13     -1.118      0.274   -1.09e-12    3.23e-13
+predictor_1    -0.2791      0.278     -1.004      0.325      -0.853       0.295
+predictor_2 -4.825e-11   2.59e-11     -1.865      0.074   -1.02e-10    5.14e-12
+predictor_3  6.025e-11   3.23e-11      1.866      0.074    -6.4e-12    1.27e-10
+predictor_4  2.788e-08   5.09e-09      5.478      0.000    1.74e-08    3.84e-08
+predictor_5 -1.639e-14   1.44e-15    -11.352      0.000   -1.94e-14   -1.34e-14
+predictor_6  3.131e-06    2.1e-06      1.493      0.148    -1.2e-06    7.46e-06
+==============================================================================
+Omnibus:                        9.097   Durbin-Watson:                   1.749
+Prob(Omnibus):                  0.011   Jarque-Bera (JB):                8.353
+Skew:                          -0.868   Prob(JB):                       0.0154
+Kurtosis:                       4.858   Cond. No.                     5.99e+15
+==============================================================================
+
+Notes:
+[1] Standard Errors are heteroscedasticity robust (HC1)
+[2] The condition number is large, 5.99e+15. This might indicate that there are
+strong multicollinearity or other numerical problems.
+
+
+

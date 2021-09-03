@@ -1,0 +1,21 @@
+                                                                            Indicator     Score
+1                                                                    Urban population  0.208495
+2                                                       Mobile cellular subscriptions   0.20729
+3       Agricultural nitrous oxide emissions (thousand metric tons of CO2 equivalent)   0.20539
+4                                                                   Population, total  0.195217
+5                                                 Secondary education, general pupils  0.195126
+6                                                         Secondary education, pupils  0.193583
+7                                                           Primary education, pupils  0.193571
+8             Agricultural methane emissions (thousand metric tons of CO2 equivalent)   0.19261
+9                                            Total fisheries production (metric tons)   0.18208
+10                                                      Fixed broadband subscriptions  0.181694
+11                                                      Fixed telephone subscriptions  0.179796
+12                                                                   Rural population  0.178699
+13                                         Capture fisheries production (metric tons)  0.178619
+14  Nitrous oxide emissions in energy sector (thousand metric tons of CO2 equivalent)  0.178011
+15                                  Adjusted savings: mineral depletion (current US$)  0.176487
+16                                                           Fish species, threatened  0.164501
+17                                                            total number of patents  0.163409
+18        Methane emissions in energy sector (thousand metric tons of CO2 equivalent)  0.151487
+19                                                  Patent applications, nonresidents  0.148575
+20                                                     Patent applications, residents  0.145498

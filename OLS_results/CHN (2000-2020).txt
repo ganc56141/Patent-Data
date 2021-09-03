@@ -1,0 +1,54 @@
+>>> Country: CHN, Years: 2000-2020
+
+Indicators: ['Net primary income (Net income from abroad) (current LCU)', 'Unemployment, total (% of total labor force) (modeled ILO estimate)', 'Population ages 15-64, total', 'Communications, computer, etc. (% of service imports, BoP)', 'Gross capital formation (annual % growth)', 'Population ages 00-04, male (% of male population)', 'total number of patents']
+ - Avg VIF 3.922885
+True VIF = X
+Net primary income (Net income from abroad) (current LCU)              1.680461
+Communications, computer, etc. (% of service imports, BoP)             2.078161
+Gross capital formation (annual % growth)                              2.970714
+Unemployment, total (% of total labor force) (modeled ILO estimate)    3.068556
+Population ages 00-04, male (% of male population)                     4.978359
+total number of patents                                                5.920645
+Population ages 15-64, total                                           6.763296
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.6410457230714386
+
+Indicators: ['Net primary income (Net income from abroad) (current LCU)', 'Net financial account (BoP, current US$)', 'Inflation, GDP deflator (annual %)', 'Computer, communications and other services (% of commercial service imports)', 'Communications, computer, etc. (% of service imports, BoP)', 'Women Business and the Law Index Score (scale 1-100)', 'total number of patents']
+ - Avg VIF 4.027056
+True VIF = X
+Inflation, GDP deflator (annual %)                                               1.320184
+Communications, computer, etc. (% of service imports, BoP)                       2.131217
+Net primary income (Net income from abroad) (current LCU)                        2.262927
+Computer, communications and other services (% of commercial service imports)    3.109777
+Net financial account (BoP, current US$)                                         4.762637
+Women Business and the Law Index Score (scale 1-100)                             6.534605
+total number of patents                                                          8.068049
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.5447004864469687
+
+Indicators: ['Net primary income (Net income from abroad) (current LCU)', 'Unemployment, total (% of total labor force) (modeled ILO estimate)', 'DEC alternative conversion factor (LCU per US$)', 'Arms imports (SIPRI trend indicator values)', 'Travel services (% of commercial service exports)', 'Gross capital formation (annual % growth)', 'total number of patents']
+ - Avg VIF 4.226010
+True VIF = X
+Net primary income (Net income from abroad) (current LCU)              1.549020
+Unemployment, total (% of total labor force) (modeled ILO estimate)    2.053997
+Gross capital formation (annual % growth)                              3.317006
+Travel services (% of commercial service exports)                      3.539245
+total number of patents                                                5.375426
+Arms imports (SIPRI trend indicator values)                            6.490563
+DEC alternative conversion factor (LCU per US$)                        7.256814
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.6267738681088253
+
+Indicators: ['Unemployment, total (% of total labor force) (modeled ILO estimate)', 'Stocks traded, total value (% of GDP)', 'External balance on goods and services (% of GDP)', 'Travel services (% of commercial service exports)', 'Interest rate spread (lending rate minus deposit rate, %)', 'Secondary income receipts (BoP, current US$)', 'total number of patents']
+ - Avg VIF 4.318479
+True VIF = X
+Stocks traded, total value (% of GDP)                                   2.186541
+Unemployment, total (% of total labor force) (modeled ILO estimate)     2.589161
+Travel services (% of commercial service exports)                       2.725674
+External balance on goods and services (% of GDP)                       2.870260
+Secondary income receipts (BoP, current US$)                            3.079537
+total number of patents                                                 5.935729
+Interest rate spread (lending rate minus deposit rate, %)              10.842453
+Name: VIF, dtype: float64
+ - Adjusted R2 = 0.783181638064705
+
