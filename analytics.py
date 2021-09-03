@@ -6,6 +6,7 @@ from tokenize import group
 
 from numpy.core.numeric import False_
 from numpy.lib.npyio import save
+from pandas.core.indexes import multi
 import utility
 import math, random
 import pandas as pd
@@ -17,6 +18,9 @@ import matplotlib.pyplot as plt
 import statsmodels as sm
 import statsmodels.formula.api as smf
 from statsmodels.multivariate.pca import PCA
+import random as rd
+from sklearn.decomposition import PCA
+from sklearn import preprocessing
 import preprocess
 import rich
 
@@ -65,6 +69,7 @@ def transcribe_patent_data_for_theWorldBank():
     patent_df = patent_df.rename(index=new_indicies)
     
     return patent_df
+
 
 def build_LARGE_singleIndex_dataframe(track_extra_data=False):
     # 1. Get transcribed patent dataset
@@ -247,8 +252,8 @@ def checkForNormality():
 
 def playground():
     # check for skewness
-    # data = norm.rvs(size=30, random_state=3)
-    # print(type(data))
+    data = norm.rvs(size=30, random_state=3)
+    print(type(data))
     
     data = np.random.rand(100)
     bin_means = binned_statistic(data, data, bins=5, range=None)[0]
@@ -293,13 +298,9 @@ def buildModel(multi_df, dependent_variable='GDP (current US$)', recursionDepthM
         
         return model
 
-
-def runPCA(multi_df):
-    pc = PCA(multi_df)      # could potentially use EM's algorithms to fill in missing values
-    print(pc)
     
 
-def analyzeDF(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'], 
+def runOLS(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'], 
               num_best_indicators = 6, num_sets = 6, MUST_HAVE_INDICATOR = 'total number of patents',
               results_folder = 'results'):
     
@@ -445,6 +446,17 @@ def checkVIFs(df, sorted_=True):
 
 
 def findMostIndependent(df, savepath=None):
+    """Takes DF, and removes columns (indicators) that are scaled or shifted version of others
+    Does so by assuming those columns have VIF = inf
+
+    Args:
+        df (pandas dataframe): contains the data in rows, and attributes/indicators in columns
+        savepath (str, optional): Path to save filtered dataframe. Defaults to None.
+
+    Returns:
+        df (pandas df): filtered dataframe
+    """
+    
     s = time.perf_counter()
     for _ in range(df.shape[1]-1):      # since one cannot be evaluated anymore
         sys.stdout.write('\r')
@@ -531,27 +543,211 @@ def findBestSets(df, group_size, top_choices=5, method='avg', random_sampling=No
         
     
 
+def simple_plot(multi_df, country_codes=None):
+    multi_df = multi_df.reset_index(level=[0, 1])       # flatten row multiindexing
+
+    if country_codes == None:
+        country_codes = multi_df['country_code'].unique()
+            
+    # get country names
+    codes_df = pd.read_csv(country_codes_path)
+    alpha3_to_name = {code:name for code, name in zip(codes_df['alpha-3'], codes_df['name'])}
+    
+    
+    for i, country_code in enumerate(country_codes):
+        print(f'{i+1}/{len(country_codes)}: fitting {country_code} data') 
+        
+        df = multi_df[multi_df['country_code'] == country_code].loc[:, ['year', 'GDP (constant LCU)', 'total number of patents']]
+        # df['ratio'] = df['GDP (constant LCU)'] / df['total number of patents']
+        # df = df[df['total number of patents'] > 10]
+        df = df.dropna()
+        df.sort_values(by='year', ascending=True, inplace=True)
+        # print(df.head)
+        
+        x = 'total number of patents'
+        y = 'GDP (constant LCU)'
+        x_vals, y_vals = df[x].values, df[y].values
+        
+        fig, ax = plt.subplots(figsize=[20, 15])
+        ax.plot(x_vals, y_vals, markersize=3, marker='o', linestyle='dashed')
+        for i, year in enumerate(df['year']):
+            ax.annotate(year, (x_vals[i], y_vals[i]))
+        
+        
+        # plot line of best fit
+        # model = performOLS(df, X=['total number of patents'], Y='GDP (constant LCU)')
+        # print(model.get_robustcov_results().summary())ow
+        # print(model.params)
+        # print(f'r2 = {model.get_robustcov_results().rsquared_adj}')
+
+        m, b, r_value, p_value, std_err = scipy.stats.linregress(x_vals, y_vals)
+        # m, b = np.polyfit(x_vals, y_vals, 1)
+        plt.plot(x_vals, m*x_vals + b, linewidth=1.2, label=f'{m:.2f}*{x} + {b:.2f}')
+        
+        name = alpha3_to_name[country_code]
+        plt.title(f'{name}: Total patents to GDP (n={len(df[x])}) (r2 = {r_value**2:.5f}) (p = {p_value:.8f})')
+        plt.grid(alpha=.4,linestyle='--')
+        plt.yscale('linear')
+        plt.legend()
+        plt.savefig(f'simple_plots/{country_code}-{name}.png')
+        plt.close()
+    
+
+def clean_data_for_PCA(multi_df):
+    
+    df = multi_df.reset_index(level=[0, 1])       # flatten row multiindexing`
+    
+    # -- singular country --
+    # df = df[ (df['country_code'] == 'CHN') & (df['year'] >= 1990) ]     # choosing country and year
+    # df.drop(['country_code'], axis=1, inplace=True)
+    # df.set_index('year', inplace=True)
+
+    # -- all countries as one --
+    df = df[ df['year'] >= 1980 ]     # choosing country and year
+    df = df.groupby('country_code').mean()     # choosing country and year
+    
+    
+    # -- try no grouping, so each entry is Country+Year, e.g. USA2012--
+    # df['new_index'] = df['country_code'] + df['year'].map(str)
+    # df.set_index('new_index', inplace=True)
+    # df.drop(['country_code', 'year'], axis=1, inplace=True)
+    
+    # remove indicators with NaN or Inf
+    df = df.replace([np.inf, -np.inf], np.nan).dropna(axis=1, how='any')
+    
+    # for ind in df.columns:
+    #     if ind == 'total number of patents':
+    #         continue
+    #     if np.isnan(df[ind].values).any():
+    #         del df[ind]
+
+            
+    # best_indicators = ['total number of patents', 'Urban population', 'Population, total', 'Primary education, pupils', 'Secondary education, general pupils', 'Secondary education, pupils', 'Capture fisheries production (metric tons)', 'Rural population', 'Total fisheries production (metric tons)', 'Adjusted savings: mineral depletion (current US$)', 'Fish species, threatened', 'Mammal species, threatened', 'Fixed broadband subscriptions', 'Fixed telephone subscriptions', 'Bird species, threatened', 'Patent applications, residents', 'Patent applications, nonresidents', 'Secondary education, general pupils (% female)', 'Land area (sq. km)', 'Surface area (sq. km)']
+    best_indicators = set(list(df.columns.values) + ['total number of patents'])     # just use all + 'patent count'
+    df = df.loc[:, best_indicators]
+    print(df.shape)
+    return df
+
+
+def run_PCA_scikit(multi_df):
+    # first, data cleaning
+    df = clean_data_for_PCA(multi_df)
+    print(df)
+
+    scaled_data = preprocessing.scale(df)   # now mean = 0, and sd = 1 (standard normal distribution)
+
+    pca = PCA(n_components=10)
+    pca.fit(scaled_data)        # the calculations
+    pca_data = pca.transform(scaled_data)   # projecting points onto new principle components
+
+    
+    # Generate Scree Plot
+    per_var = np.round(pca.explained_variance_ratio_ * 100, decimals=2)
+
+    labels = ['PC' + str(x) for x in range(1, len(per_var)+1)]
+
+    fig, ax = plt.subplots(figsize=[12, 9])
+    ax.bar(x = labels, height=per_var)
+    for bar in ax.patches:
+        ax.annotate(f"{bar.get_height():.2f}%",
+                    (bar.get_x() + bar.get_width() / 2,
+                    bar.get_height()), ha='center', va='center',
+                    size=12, xytext=(0, 8),
+                    textcoords='offset points')
+
+    ax.set_ylabel('Percentage of Explained Variance')
+    ax.set_ylabel('Principal Component')
+    ax.set_title('Scree Plot')
+    plt.show()
+    plt.close()
+
+
+
+    # # Generate PCA Plot with first 2 principle components
+    pca_df = pd.DataFrame(pca_data, index=[*df.index.values], columns=labels)
+    print(pca_df)
+    plt.figure(figsize=[12, 9])
+    plt.scatter(pca_df.PC1, pca_df.PC2, c=df['GDP (constant 2010 US$)'], cmap='Spectral')
+    plt.title('PCA Graph')
+    plt.xlabel(f'PC1 - {per_var[0]}%')
+    plt.ylabel(f'PC2 - {per_var[1]}%')
+
+    for sample in pca_df.index:
+        plt.annotate(sample, (pca_df.PC1.loc[sample], pca_df.PC2.loc[sample]))
+        
+        
+
+    plt.show()
+
+    # # Check loading scores (on PC1) to see which indicators have most influence on variance
+    loading_scores = pd.Series(pca.components_[0], index=df.columns)
+    sorted_loading_scores = loading_scores.abs().sort_values(ascending=False)
+    top_indicators = sorted_loading_scores[0:20].index
+    
+    df = pd.DataFrame( [top_indicators, loading_scores[top_indicators].values], 
+                      index=['Indicator', 'Score'], 
+                      columns=[list(range(1, len(top_indicators)+1))] )     # note this dataframe has row and columns flipped
+    print(df.T)
+    print()
+
+
+
+def run_PCA_Statsmodel(multi_df):
+    df = clean_data_for_PCA(multi_df)
+    
+    pc = sm.multivariate.pca.PCA(df, ncomp=10, missing='drop-row', standardize=True)      # could potentially use EM's algorithms to fill in missing values
+    
+    print(pc.coeff)
+    print(pc.projection)
+    pc.plot_scree(log_scale=False)
+    pc.plot_rsquare()
+    # plt.show()
+
+    # print(pc.project(ncomp=2))
+
+
 
 def main():
-    # checkForNormality()
-    # playground()
-    # multipleRegression()
-    # build_LARGE_singleIndex_dataframe()
+    
+    # -- Step 1: Build the LARGE singleIndex dataframe from raw JSON Data --
     # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)
     
+    
+    # -- Step 2: read in the the build dataframe --
     multi_df_path = f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv'
-    multi_df = pd.read_csv(multi_df_path)
-    
-    multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
+    multi_df = pd.read_csv(multi_df_path, index_col=['country_code', 'year'])
+    # multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
 
-    analyzeDF(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU'], num_sets=5)
 
-    # test dataset
-    # data = pd.read_csv('~/Downloads/BMI.csv')
-    # X = data[['Height', 'Weight']]
-    # print(np.corrcoef(X['Height'].values, X['Weight'].values)[0, 1])
-    # print(checkVIFs(X))
+    # -- Step 2.5 quick visualizations to check data spread (if necessary) --
+    checkForNormality()
+    # y = multi_df.loc[['ARG'], ['total number of patents']]
+    # y = y.dropna().values
+    # x = [i+1 for i in range(0, len(y))]
     
+    # plt.plot(x, y)
+    # plt.show()
+    
+    
+    
+    
+    
+    
+    # -- Step 4. Generate simple variable regressions --
+    simple_plot(multi_df)
+    
+    
+    # -- Step 5. Analyze using OLS --
+        # choose your countries by their unique alpha-3 code
+    runOLS(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU'], num_sets=5)        
+    
+    
+    # -- Step 6. Analyze using PCA --
+    run_PCA_scikit(multi_df, groupby='Country')     # currently only supports grouping data by country before running pca
+
+    
+   
+
     
 
 
