@@ -1,12 +1,9 @@
 from collections import Counter
 import os, sys, csv, time, pickle
-import functools
-import operator
 from tokenize import group
 
 from numpy.core.numeric import False_
 from numpy.lib.npyio import save
-from pandas.core.indexes import multi
 from utility import interface_decorator
 import math, random
 import pandas as pd
@@ -18,7 +15,6 @@ import matplotlib.pyplot as plt
 import statsmodels as sm
 import statsmodels.formula.api as smf
 from statsmodels.multivariate.pca import PCA
-import random as rd
 from sklearn.decomposition import PCA
 from sklearn import preprocessing
 import preprocess
@@ -54,7 +50,7 @@ def main():
 
     # -- Step 2.5 quick visualizations to check data spread (if necessary) --
     checkForNormality(num_bins=50)
-    # quickPlot(multi_df, country='ARG', indicator='total number of patents')        # quick plot of one indicator of one country
+    # quickPlot(multi_df, country='ARG', indicator='total number of patents')        # quick plot of one indicator in one country by year
     
     
     # -- Step 3. Generate simple variable regressions for ALL countries by default --
@@ -63,7 +59,10 @@ def main():
     
     # -- Step 4. Analyze using OLS --
     # choose your countries by their unique alpha-3 code
-    runOLS(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU', 'GBR', 'JOR'], num_sets=5) 
+    df = multi_df.xs(key=2020, axis=0, level='year', drop_level=False).sort_values(by=['GDP (current US$)'], ascending=False)   # sort by GDP
+    countries = df.index.get_level_values('country_code').to_numpy()[:10]       # get top 10 countries
+    
+    runOLS(multi_df, country=countries, num_sets=5) 
     
     
     # -- Step 5. Analyze using PCA --
@@ -741,7 +740,7 @@ def run_PCA_scikit(multi_df, groupby='country_code'):
 
 
 def run_PCA_Statsmodel(multi_df):
-    df = clean_data_for_PCA(multi_df)
+    df = clean_data_for_PCA(multi_df, groupby='country_code')
     
     pc = sm.multivariate.pca.PCA(df, ncomp=10, missing='drop-row', standardize=True)      # could potentially use EM's algorithms to fill in missing values
     
