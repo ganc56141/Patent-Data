@@ -7,7 +7,7 @@ from tokenize import group
 from numpy.core.numeric import False_
 from numpy.lib.npyio import save
 from pandas.core.indexes import multi
-import utility
+from utility import interface_decorator
 import math, random
 import pandas as pd
 import numpy as np
@@ -32,13 +32,51 @@ country_codes_path = 'references/country_codes_full.csv'    # grabbed from wikie
 regression_dataset_folder = 'regression_datasets'
 optimized_dataset_folder = 'optimized_country_data'
 
+
+
+def main():
+    """ This is the user interface, the main driver of all features
+            Step 1 builds the dataframe from raw data
+            Step 2 reads in the dataframe if already exists
+            Each step after Step 2 can be ran independently
+            Try it out!
+    """
+    
+    # -- Step 1: Build the LARGE singleIndex dataframe from raw JSON Data --
+    # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)     # if a different data range is needed
+    
+    
+    # -- Step 2: read in the the build dataframe --
+    multi_df_path = f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv'
+    multi_df = pd.read_csv(multi_df_path, index_col=['country_code', 'year'])
+    # multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
+
+
+    # -- Step 2.5 quick visualizations to check data spread (if necessary) --
+    checkForNormality(num_bins=50)
+    # quickPlot(multi_df, country='ARG', indicator='total number of patents')        # quick plot of one indicator of one country
+    
+    
+    # -- Step 3. Generate simple variable regressions for ALL countries by default --
+    simple_plot(multi_df)   # outputs graphs to simple_plots subdirectory
+    
+    
+    # -- Step 4. Analyze using OLS --
+    # choose your countries by their unique alpha-3 code
+    runOLS(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU', 'GBR', 'JOR'], num_sets=5) 
+    
+    
+    # -- Step 5. Analyze using PCA --
+    run_PCA_scikit(multi_df, groupby='country_code')     # currently only supports grouping data by country before running PCA
+
+
+
 def flattenAndClean(df):
     flat = df.to_numpy().flatten()
     clean = [entry for entry in flat 
              if type(entry) == float 
              and not math.isnan(entry) ]
     return clean
-    
     
     # row = df.iloc[0, 1:].values
     # clean_row = np.array( [e for e in row if not math.isnan(e)] )
@@ -211,8 +249,8 @@ def multipleRegression():
     print(np.tanh(y))   # and tanh is the inverse of fisher's z transformation
     # model = sm.ols("z ~ x + y", data).fit()
     
-
-def checkForNormality():
+@interface_decorator
+def checkForNormality(num_bins=50):
     # import test data
     filepath = f'{data_folder}/GDP (current US$).csv'
     filepath = f'{data_folder}/GNI per capita, Atlas method (current US$).csv'
@@ -243,12 +281,21 @@ def checkForNormality():
     # binned = scipy.stats.binned_statistic(df_clean, df_clean, statistic='mean', bins=10, range=None)
     # print(type(binned[0]))
     
-    num_bins = 50
     frequency, bins = np.histogram(data, bins=num_bins, range=None)
     print(f'{bins=}, {frequency=}')
     plt.hist(data, bins=num_bins)
     plt.show()
+
+@interface_decorator
+def quickPlot(multi_df, country, indicator='total number of patents'):
+    y = multi_df.loc[[country], [indicator]]
+    y = y.dropna().values
+    x = [i+1 for i in range(0, len(y))]
     
+    plt.plot(x, y)
+    plt.title(f'{country} - {indicator}')
+    plt.show()
+
 
 def playground():
     # check for skewness
@@ -298,8 +345,8 @@ def buildModel(multi_df, dependent_variable='GDP (current US$)', recursionDepthM
         
         return model
 
-    
 
+@interface_decorator
 def runOLS(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'], 
               num_best_indicators = 6, num_sets = 6, MUST_HAVE_INDICATOR = 'total number of patents',
               results_folder = 'results'):
@@ -348,17 +395,13 @@ def runOLS(multi_df, start_year = 2000, end_year = 2020, country = ['GBR'],
             i += 1
     
     rich.print(f"[#1da5ee] >>> DONE. Results recorded ---> {output_file} [/#1da5ee]\n")
+    
     # 5. Display results
     # print(model.get_robustcov_results().summary())
     # print(model.params)
     # print(f'r2 = {model.get_robustcov_results().rsquared_adj}')
     
     return
-    
-    
-    # by_country_df = multi_df.groupby(by=["country_code"]).sum()
-    # print(by_country_df)
-    
 
 
 def performOLS(multi_df, X, Y):
@@ -393,9 +436,11 @@ def filter_redundancy(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, count
             X = pickle.load(f)
     return X
 
+
 def country_year_extractor(multi_df, MUST_HAVE_INDICATOR, start_year, end_year, country):
     # 1. dataframe selection
-    multi_df.set_index(['country_code', 'year'], inplace=True)
+    if not isinstance(multi_df.index, pd.MultiIndex):
+        multi_df.set_index(['country_code', 'year'], inplace=True)
     # multi_df.fillna(0, inplace=True)      # only useful for testing (cannot be justified statistically)
     # multi_df.dropna(inplace=True)     # performed later
     
@@ -542,7 +587,7 @@ def findBestSets(df, group_size, top_choices=5, method='avg', random_sampling=No
     return scores[:top_choices]
         
     
-
+@interface_decorator
 def simple_plot(multi_df, country_codes=None):
     multi_df = multi_df.reset_index(level=[0, 1])       # flatten row multiindexing
 
@@ -592,8 +637,11 @@ def simple_plot(multi_df, country_codes=None):
         plt.savefig(f'simple_plots/{country_code}-{name}.png')
         plt.close()
     
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    print(f'\nView Simple Plots in: \n{dir_path}/simple_plots\n')
+    
 
-def clean_data_for_PCA(multi_df):
+def clean_data_for_PCA(multi_df, groupby):
     
     df = multi_df.reset_index(level=[0, 1])       # flatten row multiindexing`
     
@@ -628,10 +676,10 @@ def clean_data_for_PCA(multi_df):
     print(df.shape)
     return df
 
-
-def run_PCA_scikit(multi_df):
+@interface_decorator
+def run_PCA_scikit(multi_df, groupby='country_code'):
     # first, data cleaning
-    df = clean_data_for_PCA(multi_df)
+    df = clean_data_for_PCA(multi_df, groupby=groupby)
     print(df)
 
     scaled_data = preprocessing.scale(df)   # now mean = 0, and sd = 1 (standard normal distribution)
@@ -704,52 +752,7 @@ def run_PCA_Statsmodel(multi_df):
     # plt.show()
 
     # print(pc.project(ncomp=2))
-
-
-
-def main():
     
-    # -- Step 1: Build the LARGE singleIndex dataframe from raw JSON Data --
-    # df = build_LARGE_multiIndex_dataset(start=2000, end=2020)
-    
-    
-    # -- Step 2: read in the the build dataframe --
-    multi_df_path = f'{regression_dataset_folder}/MultiIndexed_(1960-2020)_(N=1444).csv'
-    multi_df = pd.read_csv(multi_df_path, index_col=['country_code', 'year'])
-    # multi_df = multi_df.sort_values(by=['total number of patents'], ascending=False)
-
-
-    # -- Step 2.5 quick visualizations to check data spread (if necessary) --
-    checkForNormality()
-    # y = multi_df.loc[['ARG'], ['total number of patents']]
-    # y = y.dropna().values
-    # x = [i+1 for i in range(0, len(y))]
-    
-    # plt.plot(x, y)
-    # plt.show()
-    
-    
-    
-    
-    
-    
-    # -- Step 4. Generate simple variable regressions --
-    simple_plot(multi_df)
-    
-    
-    # -- Step 5. Analyze using OLS --
-        # choose your countries by their unique alpha-3 code
-    runOLS(multi_df, country=['CHN', 'USA', 'JPN', 'KOR', 'DEU'], num_sets=5)        
-    
-    
-    # -- Step 6. Analyze using PCA --
-    run_PCA_scikit(multi_df, groupby='Country')     # currently only supports grouping data by country before running pca
-
-    
-   
-
-    
-
 
 if __name__ == '__main__':
     main()

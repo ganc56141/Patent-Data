@@ -54,6 +54,27 @@ def request_decorator(interface):
         return return_value
     return inner
 
+def interface_decorator(interface):
+        def inner(*args, **kwargs):     # must have inner function to take and transfer the proper arguments
+                indent = 12
+                starting_string = " "*indent + f"Running {interface.__name__} on dataset" + " "*indent 
+                ending_string = " "*indent + f"{interface.__name__} done." + " "*indent 
+                
+                print(); print()
+                print("=" * len(starting_string))
+                print(starting_string)
+                print("-"* len(starting_string))
+                print()
+                
+                interface(*args, **kwargs)
+                
+                print()
+                print("-" * len(ending_string))
+                print(ending_string)
+                print("=" * len(ending_string))
+                print()
+        return inner
+  
 
 # ====================================
 #           Utility Methods
